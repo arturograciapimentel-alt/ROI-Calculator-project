@@ -1,0 +1,119 @@
+export type PropertyType =
+  | "full-service"
+  | "select-service"
+  | "resort"
+  | "casino"
+  | "extended-stay"
+  | "boutique"
+  | "all-inclusive";
+
+export type MarketTier = "primary" | "secondary" | "tertiary";
+
+export type RMApproach =
+  | "spreadsheets"
+  | "basic-rms"
+  | "competitor-rms"
+  | "none";
+
+export type Scenario = "conservative" | "moderate" | "aggressive";
+
+export type Currency = "USD" | "EUR" | "GBP" | "MXN" | "CAD" | "AUD" | "JPY";
+
+export interface PropertyInputs {
+  // Property Configuration
+  propertyName: string;
+  propertyType: PropertyType;
+  totalRooms: number;
+  starRating: number;
+  location: string;
+  marketTier: MarketTier;
+  currency: Currency;
+
+  // Current Performance
+  currentADR: number;
+  currentOccupancy: number; // 0-1
+  groupBusinessPercent: number; // 0-1
+  directBookingPercent: number; // 0-1
+  otaPercent: number; // 0-1
+
+  // Operational Context
+  rmApproach: RMApproach;
+  competitorRMSName: string;
+  rmStaffCount: number;
+  hoursPerWeekManual: number;
+  numberOfProperties: number;
+
+  // Cost Context
+  otaCommissionRate: number; // 0-1
+  cpor: number;
+  annualRMLaborCost: number;
+
+  // Duetto cost
+  duettoAnnualCost: number;
+}
+
+export interface ScenarioAssumptions {
+  adrUpliftPercent: number;
+  occupancyUpliftPoints: number;
+  groupPricingImprovementPercent: number;
+  channelShiftPercent: number;
+  laborHoursSavedPerWeek: number;
+  marketGrowthRate: number;
+}
+
+export interface ROIProjection {
+  // Revenue impacts
+  incrementalADRRevenue: number;
+  incrementalOccRevenue: number;
+  combinedRevPARUplift: number;
+  annualIncrementalRoomRevenue: number;
+  groupRevenue: number;
+  distributionSavings: number;
+  laborSavings: number;
+
+  // Summary
+  totalIncrementalRevenue: number;
+  totalCostSavings: number;
+  totalAnnualImpact: number;
+  netROIPercent: number;
+  paybackMonths: number;
+  roiMultiple: number;
+
+  // Per-metric new values
+  newADR: number;
+  newOccupancy: number;
+  newRevPAR: number;
+  currentRevPAR: number;
+}
+
+export interface YearlyProjection {
+  year: number;
+  incrementalRevenue: number;
+  costSavings: number;
+  totalImpact: number;
+  duettoInvestment: number;
+  netBenefit: number;
+  cumulativeNetBenefit: number;
+  roiPercent: number;
+}
+
+export interface CalculatorState {
+  activeTab: number;
+  inputs: PropertyInputs;
+  scenario: Scenario;
+  assumptions: {
+    conservative: ScenarioAssumptions;
+    moderate: ScenarioAssumptions;
+    aggressive: ScenarioAssumptions;
+  };
+  projections: {
+    conservative: ROIProjection;
+    moderate: ROIProjection;
+    aggressive: ROIProjection;
+  };
+  yearlyProjections: YearlyProjection[];
+  capRate: number;
+  hourlyLaborRate: number;
+  preparedBy: string;
+  nextSteps: string;
+}
