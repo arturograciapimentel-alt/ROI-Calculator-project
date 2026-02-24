@@ -4,7 +4,7 @@ import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, TextInput, SelectInput, SliderInput, StarRating } from "@/components/ui/InputField";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost } from "@/lib/calculations";
+import { formatCurrency, CURRENCY_SYMBOLS } from "@/lib/calculations";
 import type { PropertyInputs } from "@/lib/types";
 
 function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
@@ -39,7 +39,6 @@ export function Tab1PropertyProfile() {
 
   const currentRevPAR = inputs.currentADR * inputs.currentOccupancy;
   const annualRevenue = currentRevPAR * inputs.totalRooms * 365;
-  const estimatedCost = inputs.duettoAnnualCost || estimateDuettoCost(inputs.totalRooms);
 
   const update = useCallback(
     (key: keyof PropertyInputs, value: PropertyInputs[keyof PropertyInputs]) => {
@@ -96,9 +95,9 @@ export function Tab1PropertyProfile() {
           size="sm"
         />
         <MetricCard
-          label="Est. Duetto Investment"
-          value={formatCurrency(estimatedCost, inputs.currency)}
-          subtitle="Annual subscription est."
+          label="Yieldable Mix"
+          value={`${Math.round(inputs.yieldablePercent * 100)}%`}
+          subtitle="RMS-optimizable room nights"
           variant="gold"
           size="sm"
         />
@@ -188,7 +187,7 @@ export function Tab1PropertyProfile() {
             <TextInput
               type="number"
               value={inputs.numberOfProperties || ""}
-              onChange={(e) => update("numberOfProperties", parseInt(e.target.value) || 1)}
+              onChange={(e) => update("numberOfProperties", parseInt(e.target.value) || 0)}
               min="1"
               max="100"
               placeholder="1"
@@ -252,21 +251,16 @@ export function Tab1PropertyProfile() {
 
           <div>
             <InputField
-              label="OTA Booking Mix"
-              tooltip="Percentage of bookings coming through OTA channels (Expedia, Booking.com, etc.)"
+              label="Yieldable Booking Mix (% of room nights)"
+              tooltip="Percentage of room nights in segments the RMS can optimize with dynamic pricing. Non-yieldable segments — such as group blocks and corporate contracted rates — operate at static negotiated rates."
             >
-              <div className="space-y-1">
-                <SliderInput
-                  value={Math.round(inputs.otaPercent * 100)}
-                  min={0}
-                  max={95}
-                  onChange={(v) => {
-                    update("otaPercent", v / 100);
-                    update("directBookingPercent", (100 - v) / 100);
-                  }}
-                  formatValue={(v) => `OTA ${v}% / Direct ${100 - v}%`}
-                />
-              </div>
+              <SliderInput
+                value={Math.round(inputs.yieldablePercent * 100)}
+                min={10}
+                max={100}
+                onChange={(v) => update("yieldablePercent", v / 100)}
+                formatValue={(v) => `${v}% yieldable · ${100 - v}% fixed/non-yieldable`}
+              />
             </InputField>
           </div>
         </div>
@@ -333,76 +327,6 @@ export function Tab1PropertyProfile() {
         </div>
       </div>
 
-      {/* Section 4: Cost Context */}
-      <div className="glass-card rounded-2xl p-6 border border-white/8">
-        <SectionHeader
-          number={4}
-          title="Cost Context"
-          subtitle="Optional — enables deeper cost savings analysis"
-        />
-        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-          <div>
-            <InputField
-              label="OTA Commission Rate"
-              tooltip="Your average OTA commission rate. Industry average is 17-22%."
-            >
-              <SliderInput
-                value={Math.round(inputs.otaCommissionRate * 100)}
-                min={10}
-                max={30}
-                onChange={(v) => update("otaCommissionRate", v / 100)}
-                formatValue={(v) => `${v}%`}
-              />
-            </InputField>
-          </div>
-
-          <InputField
-            label={`Cost Per Occupied Room (CPOR) — ${sym}`}
-            tooltip="Variable cost per occupied room night including housekeeping, amenities, etc."
-          >
-            <TextInput
-              type="number"
-              value={inputs.cpor || ""}
-              onChange={(e) => update("cpor", parseFloat(e.target.value) || 0)}
-              prefix={sym}
-              placeholder="45"
-            />
-          </InputField>
-
-          <InputField
-            label={`Annual RM Labor Cost — ${sym}`}
-            tooltip="Total fully-loaded annual cost of revenue management staff"
-          >
-            <TextInput
-              type="number"
-              value={inputs.annualRMLaborCost || ""}
-              onChange={(e) => update("annualRMLaborCost", parseFloat(e.target.value) || 0)}
-              prefix={sym}
-              placeholder="100,000"
-            />
-          </InputField>
-
-          <InputField
-            label={`Duetto Annual Investment — ${sym}`}
-            tooltip="Leave blank to auto-estimate based on property size. Duetto pricing varies by property size and modules."
-          >
-            <TextInput
-              type="number"
-              value={inputs.duettoAnnualCost || ""}
-              onChange={(e) => update("duettoAnnualCost", parseFloat(e.target.value) || 0)}
-              prefix={sym}
-              placeholder={`Auto: ${formatCurrency(estimatedCost, inputs.currency)}`}
-            />
-          </InputField>
-        </div>
-
-        <div className="mt-4 p-3 rounded-xl bg-emerald-brand/5 border border-emerald-brand/20">
-          <p className="text-emerald-brand text-xs font-sans">
-            <strong>Auto-estimate:</strong> Based on {inputs.totalRooms} rooms, Duetto investment estimated at{" "}
-            <strong>{formatCurrency(estimatedCost, inputs.currency)}/year</strong>. Actual pricing subject to Duetto proposal.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

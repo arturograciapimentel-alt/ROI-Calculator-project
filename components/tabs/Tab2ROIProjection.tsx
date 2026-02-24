@@ -73,39 +73,24 @@ export function Tab2ROIProjection() {
   const currency = inputs.currency;
   const effectiveCost = inputs.duettoAnnualCost || estimateDuettoCost(inputs.totalRooms);
   const currentRevPAR = inputs.currentADR * inputs.currentOccupancy;
+  const revPARLift = proj.newRevPAR - currentRevPAR;
+  const revPARLiftPercent = currentRevPAR > 0 ? (revPARLift / currentRevPAR) * 100 : 0;
 
-  const adrChartData = [
-    { name: "Current ADR", value: inputs.currentADR, fill: "#60a5fa" },
-    { name: "Projected ADR", value: proj.newADR, fill: "#D4A853" },
-  ];
-
+  // RevPAR is the primary chart — current vs projected
   const revPARChartData = [
     { name: "Current RevPAR", value: parseFloat(currentRevPAR.toFixed(2)), fill: "#60a5fa" },
     { name: "Projected RevPAR", value: parseFloat(proj.newRevPAR.toFixed(2)), fill: "#00C389" },
   ];
 
-  const breakdownData = [
-    { name: "ADR Uplift", value: proj.annualIncrementalRoomRevenue * 0.6, fill: "#D4A853" },
-    { name: "Occ. Uplift", value: proj.annualIncrementalRoomRevenue * 0.4, fill: "#00C389" },
+  // ADR contribution to RevPAR uplift vs Occupancy contribution
+  const adrContribution = proj.incrementalADRRevenue;
+  const occContribution = proj.incrementalOccRevenue;
+  const revPARBreakdownData = [
+    { name: "ADR Impact", value: adrContribution, fill: "#D4A853" },
+    { name: "Occ. Impact", value: occContribution, fill: "#00C389" },
     { name: "Group Rev.", value: proj.groupRevenue, fill: "#818cf8" },
-    { name: "Distribution", value: proj.distributionSavings, fill: "#fb923c" },
     { name: "Labor Savings", value: proj.laborSavings, fill: "#e879f9" },
   ].filter((d) => d.value > 0);
-
-  const scenarioCompareData = [
-    {
-      metric: "Annual Impact",
-      conservative: Math.round(projections.conservative.totalAnnualImpact),
-      moderate: Math.round(projections.moderate.totalAnnualImpact),
-      aggressive: Math.round(projections.aggressive.totalAnnualImpact),
-    },
-    {
-      metric: "ROI Multiple",
-      conservative: parseFloat(projections.conservative.roiMultiple.toFixed(1)),
-      moderate: parseFloat(projections.moderate.roiMultiple.toFixed(1)),
-      aggressive: parseFloat(projections.aggressive.roiMultiple.toFixed(1)),
-    },
-  ];
 
   const asmp = assumptions[scenario];
 
@@ -115,7 +100,7 @@ export function Tab2ROIProjection() {
       <div>
         <h2 className="text-2xl font-serif font-bold text-white">ROI Projection Engine</h2>
         <p className="text-white/40 text-sm font-sans mt-1">
-          Adjust scenario assumptions and see your projected financial impact update in real time
+          Adjust scenario assumptions and see your projected RevPAR impact update in real time
         </p>
       </div>
 
@@ -161,9 +146,16 @@ export function Tab2ROIProjection() {
           <div className="flex justify-center gap-8 mt-6 pt-6 border-t border-white/10">
             <div className="text-center">
               <p className="text-3xl font-serif font-bold text-emerald-brand">
-                {proj.roiMultiple.toFixed(1)}x
+                +{formatCurrency(revPARLift, currency)}
               </p>
-              <p className="text-white/40 text-xs font-sans mt-1">ROI Multiple</p>
+              <p className="text-white/40 text-xs font-sans mt-1">RevPAR Lift</p>
+            </div>
+            <div className="w-px bg-white/10" />
+            <div className="text-center">
+              <p className="text-3xl font-serif font-bold text-gold-400">
+                +{revPARLiftPercent.toFixed(1)}%
+              </p>
+              <p className="text-white/40 text-xs font-sans mt-1">RevPAR Improvement</p>
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
@@ -175,42 +167,48 @@ export function Tab2ROIProjection() {
             <div className="w-px bg-white/10" />
             <div className="text-center">
               <p className="text-3xl font-serif font-bold text-blue-400">
-                {proj.netROIPercent.toFixed(0)}%
+                {proj.roiMultiple.toFixed(1)}x
               </p>
-              <p className="text-white/40 text-xs font-sans mt-1">Net ROI</p>
+              <p className="text-white/40 text-xs font-sans mt-1">ROI Multiple</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Impact Breakdown Charts */}
+      {/* RevPAR Impact Charts — primary focus */}
       <div className="grid grid-cols-2 gap-6">
-        <div className="glass-card rounded-2xl p-6 border border-white/8">
-          <h3 className="text-white font-serif font-semibold mb-1">ADR Comparison</h3>
-          <p className="text-white/40 text-xs font-sans mb-4">Current vs. Projected Average Daily Rate</p>
+        <div className="glass-card rounded-2xl p-6 border border-emerald-brand/20">
+          <h3 className="text-white font-serif font-semibold mb-1">RevPAR Improvement</h3>
+          <p className="text-white/40 text-xs font-sans mb-4">
+            Current vs. Projected Revenue Per Available Room
+          </p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={adrChartData} barSize={60}>
+            <BarChart data={revPARChartData} barSize={60}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
               <Tooltip
-                contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(212,168,83,0.3)", borderRadius: 8, color: "white" }}
+                contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(0,195,137,0.3)", borderRadius: 8, color: "white" }}
                 formatter={(v: number) => [formatCurrency(v, currency), ""]}
               />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {adrChartData.map((entry, i) => (
+                {revPARChartData.map((entry, i) => (
                   <Cell key={i} fill={entry.fill} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          <div className="mt-4 p-3 rounded-xl bg-emerald-brand/8 border border-emerald-brand/20 flex items-center justify-between">
+            <span className="text-white/50 text-xs font-sans">RevPAR lift on {Math.round(inputs.yieldablePercent * 100)}% yieldable inventory</span>
+            <span className="text-emerald-brand font-semibold text-sm">+{revPARLiftPercent.toFixed(1)}%</span>
+          </div>
         </div>
 
         <div className="glass-card rounded-2xl p-6 border border-white/8">
           <h3 className="text-white font-serif font-semibold mb-1">Revenue Impact Breakdown</h3>
           <p className="text-white/40 text-xs font-sans mb-4">Annual value by source</p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={breakdownData} layout="vertical" barSize={16}>
+            <BarChart data={revPARBreakdownData} layout="vertical" barSize={16}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
               <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v, currency, true)} />
               <YAxis type="category" dataKey="name" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
@@ -219,7 +217,7 @@ export function Tab2ROIProjection() {
                 formatter={(v: number) => [formatCurrency(v, currency), "Annual Value"]}
               />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {breakdownData.map((entry, i) => (
+                {revPARBreakdownData.map((entry, i) => (
                   <Cell key={i} fill={entry.fill} />
                 ))}
               </Bar>
@@ -236,69 +234,83 @@ export function Tab2ROIProjection() {
         <p className="text-white/40 text-xs font-sans mb-6">
           Fine-tune the projections for this scenario. Changes update all calculations instantly.
         </p>
-        <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-          <div className="space-y-4">
-            <InputField label="ADR Uplift from Open Pricing" tooltip="Additional rate revenue from Duetto's dynamic open pricing methodology vs. BAR-based systems">
-              <SliderInput
-                value={Math.round(asmp.adrUpliftPercent * 100)}
-                min={1}
-                max={15}
-                step={0.5}
-                onChange={(v) => updateAssumption(scenario, "adrUpliftPercent", v / 100)}
-                formatValue={(v) => `+${v}%`}
-              />
-            </InputField>
+        <div className="grid grid-cols-3 gap-x-10 gap-y-6">
+          <InputField label="ADR Uplift from Open Pricing" tooltip="Additional rate revenue from Duetto's dynamic open pricing methodology vs. BAR-based systems. Applied to yieldable inventory.">
+            <SliderInput
+              value={Math.round(asmp.adrUpliftPercent * 100)}
+              min={1}
+              max={15}
+              step={0.5}
+              onChange={(v) => updateAssumption(scenario, "adrUpliftPercent", v / 100)}
+              formatValue={(v) => `+${v}%`}
+            />
+          </InputField>
 
-            <InputField label="Occupancy Point Improvement" tooltip="Additional occupancy percentage points from superior demand forecasting and length-of-stay optimization">
-              <SliderInput
-                value={Math.round(asmp.occupancyUpliftPoints * 100)}
-                min={0}
-                max={8}
-                step={0.5}
-                onChange={(v) => updateAssumption(scenario, "occupancyUpliftPoints", v / 100)}
-                formatValue={(v) => `+${v} pts`}
-              />
-            </InputField>
-          </div>
+          <InputField label="Occupancy Point Improvement" tooltip="Additional occupancy percentage points from superior demand forecasting and length-of-stay optimization. Applied to yieldable inventory.">
+            <SliderInput
+              value={Math.round(asmp.occupancyUpliftPoints * 100)}
+              min={0}
+              max={8}
+              step={0.5}
+              onChange={(v) => updateAssumption(scenario, "occupancyUpliftPoints", v / 100)}
+              formatValue={(v) => `+${v} pts`}
+            />
+          </InputField>
 
-          <div className="space-y-4">
-            <InputField label="Group Pricing Improvement" tooltip="Improved group rates and displacement analysis reduces underpriced group business">
-              <SliderInput
-                value={Math.round(asmp.groupPricingImprovementPercent * 100)}
-                min={0}
-                max={15}
-                step={0.5}
-                onChange={(v) => updateAssumption(scenario, "groupPricingImprovementPercent", v / 100)}
-                formatValue={(v) => `+${v}%`}
-              />
-            </InputField>
-
-            <InputField label="OTA→Direct Channel Shift" tooltip="% of OTA bookings shifted to direct channels, reducing commission costs">
-              <SliderInput
-                value={Math.round(asmp.channelShiftPercent * 100)}
-                min={0}
-                max={15}
-                step={0.5}
-                onChange={(v) => updateAssumption(scenario, "channelShiftPercent", v / 100)}
-                formatValue={(v) => `+${v}%`}
-              />
-            </InputField>
-          </div>
+          <InputField label="Group Pricing Improvement" tooltip="Improved group rates and displacement analysis via Blockbuster reduces underpriced group business">
+            <SliderInput
+              value={Math.round(asmp.groupPricingImprovementPercent * 100)}
+              min={0}
+              max={15}
+              step={0.5}
+              onChange={(v) => updateAssumption(scenario, "groupPricingImprovementPercent", v / 100)}
+              formatValue={(v) => `+${v}%`}
+            />
+          </InputField>
         </div>
       </div>
 
-      {/* Revenue Component Cards */}
+      {/* Revenue Component Cards — RevPAR focused */}
       <div className="grid grid-cols-3 gap-4">
+        <div className="glass-card rounded-2xl p-5 border border-emerald-brand/20 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-brand" />
+            <p className="text-white/60 text-xs font-sans uppercase tracking-wider">RevPAR Impact</p>
+          </div>
+          <div>
+            <p className="text-2xl font-serif font-bold text-emerald-brand">
+              +{formatCurrency(revPARLift, currency)}
+            </p>
+            <p className="text-xs text-white/30 font-sans mt-0.5">per available room per night</p>
+          </div>
+          <div className="flex gap-4 pt-1">
+            <div>
+              <p className="text-white/40 text-xs font-sans">Current</p>
+              <p className="text-white font-semibold font-sans text-sm">{formatCurrency(currentRevPAR, currency)}</p>
+            </div>
+            <div className="text-white/20">→</div>
+            <div>
+              <p className="text-emerald-brand text-xs font-sans">Projected</p>
+              <p className="text-emerald-brand font-semibold font-sans text-sm">{formatCurrency(proj.newRevPAR, currency)}</p>
+            </div>
+          </div>
+          <ExplanationCard
+            title="Yieldable Scope"
+            body={`${Math.round(inputs.yieldablePercent * 100)}% of your room nights are in yieldable segments where Duetto's open pricing applies. The RevPAR lift is calculated on this optimizable inventory.`}
+            color="emerald"
+          />
+        </div>
+
         <div className="glass-card rounded-2xl p-5 border border-white/8 space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-gold-500" />
             <p className="text-white/60 text-xs font-sans uppercase tracking-wider">ADR Optimization</p>
           </div>
           <p className="text-2xl font-serif font-bold text-gold-400">
-            {formatCurrency(proj.annualIncrementalRoomRevenue * 0.6, currency, true)}
+            {formatCurrency(proj.annualIncrementalRoomRevenue * (proj.incrementalADRRevenue / (proj.incrementalADRRevenue + proj.incrementalOccRevenue || 1)), currency, true)}
           </p>
           <p className="text-white/40 text-xs font-sans">
-            +{formatCurrency(proj.newADR - inputs.currentADR, currency)} per night average
+            {formatCurrency(inputs.currentADR, currency)} → {formatCurrency(proj.newADR, currency)} ADR on yieldable segments
           </p>
           <ExplanationCard
             title="Open Pricing"
@@ -309,37 +321,19 @@ export function Tab2ROIProjection() {
 
         <div className="glass-card rounded-2xl p-5 border border-white/8 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-brand" />
+            <div className="w-2 h-2 rounded-full bg-blue-400" />
             <p className="text-white/60 text-xs font-sans uppercase tracking-wider">Occupancy Uplift</p>
           </div>
-          <p className="text-2xl font-serif font-bold text-emerald-brand">
-            {formatCurrency(proj.annualIncrementalRoomRevenue * 0.4 + proj.groupRevenue, currency, true)}
+          <p className="text-2xl font-serif font-bold text-blue-400">
+            {formatCurrency(proj.annualIncrementalRoomRevenue * (proj.incrementalOccRevenue / (proj.incrementalADRRevenue + proj.incrementalOccRevenue || 1)) + proj.groupRevenue, currency, true)}
           </p>
           <p className="text-white/40 text-xs font-sans">
-            {formatPercent(inputs.currentOccupancy)} → {formatPercent(proj.newOccupancy)} occupancy
+            {formatPercent(inputs.currentOccupancy)} → {formatPercent(proj.newOccupancy)} occupancy · Group: +{formatCurrency(proj.groupRevenue, currency, true)}
           </p>
           <ExplanationCard
             title="Demand Intelligence"
-            body="AI-powered forecasting fills shoulder dates, optimizes LOS restrictions, and reduces occupancy gaps."
-            color="emerald"
-          />
-        </div>
-
-        <div className="glass-card rounded-2xl p-5 border border-white/8 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-orange-400" />
-            <p className="text-white/60 text-xs font-sans uppercase tracking-wider">Cost Savings</p>
-          </div>
-          <p className="text-2xl font-serif font-bold text-orange-400">
-            {formatCurrency(proj.totalCostSavings, currency, true)}
-          </p>
-          <p className="text-white/40 text-xs font-sans">
-            Distribution: {formatCurrency(proj.distributionSavings, currency, true)} · Labor: {formatCurrency(proj.laborSavings, currency, true)}
-          </p>
-          <ExplanationCard
-            title="Channel Optimization"
-            body="Shift bookings from high-commission OTAs to direct channels and automate manual pricing workflows."
-            color="gold"
+            body="AI-powered forecasting fills shoulder dates, optimizes LOS restrictions, and reduces occupancy gaps. Blockbuster optimizes group rate recommendations."
+            color="blue"
           />
         </div>
       </div>
@@ -376,6 +370,17 @@ export function Tab2ROIProjection() {
             <tbody className="divide-y divide-white/5">
               {[
                 {
+                  label: "RevPAR Lift",
+                  fmt: (p: typeof projections.conservative) =>
+                    `+${formatCurrency(p.newRevPAR - currentRevPAR, currency)} (+${currentRevPAR > 0 ? ((p.newRevPAR - currentRevPAR) / currentRevPAR * 100).toFixed(1) : "0"}%)`,
+                  bold: true,
+                },
+                {
+                  label: "New RevPAR",
+                  fmt: (p: typeof projections.conservative) => formatCurrency(p.newRevPAR, currency),
+                  bold: true,
+                },
+                {
                   label: "ADR Uplift",
                   fmt: (p: typeof projections.conservative) =>
                     formatCurrency(p.newADR - inputs.currentADR, currency) + "/night",
@@ -385,20 +390,12 @@ export function Tab2ROIProjection() {
                   fmt: (p: typeof projections.conservative) => formatPercent(p.newOccupancy),
                 },
                 {
-                  label: "New RevPAR",
-                  fmt: (p: typeof projections.conservative) => formatCurrency(p.newRevPAR, currency),
-                },
-                {
                   label: "Incremental Room Rev.",
                   fmt: (p: typeof projections.conservative) => formatCurrency(p.annualIncrementalRoomRevenue, currency, true),
                 },
                 {
                   label: "Group Revenue Uplift",
                   fmt: (p: typeof projections.conservative) => formatCurrency(p.groupRevenue, currency, true),
-                },
-                {
-                  label: "Distribution Savings",
-                  fmt: (p: typeof projections.conservative) => formatCurrency(p.distributionSavings, currency, true),
                 },
                 {
                   label: "Labor Savings",
@@ -444,17 +441,17 @@ export function Tab2ROIProjection() {
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4">
         <MetricCard
-          label="Incremental Revenue"
-          value={formatCurrency(proj.totalIncrementalRevenue, currency, true)}
-          subtitle="New room + group revenue"
-          variant="gold"
+          label="RevPAR Improvement"
+          value={`+${revPARLiftPercent.toFixed(1)}%`}
+          subtitle={`${formatCurrency(currentRevPAR, currency)} → ${formatCurrency(proj.newRevPAR, currency)}`}
+          variant="emerald"
           size="sm"
         />
         <MetricCard
-          label="Cost Savings"
-          value={formatCurrency(proj.totalCostSavings, currency, true)}
-          subtitle="Distribution + labor"
-          variant="emerald"
+          label="Incremental Revenue"
+          value={formatCurrency(proj.totalIncrementalRevenue, currency, true)}
+          subtitle="Room revenue + group uplift"
+          variant="gold"
           size="sm"
         />
         <MetricCard

@@ -91,7 +91,7 @@ export function Tab3FiveYear() {
       type: "positive",
     },
     {
-      name: "Group &\nChannel",
+      name: "Group\nOptimization",
       base: Math.round(inputs.currentADR * inputs.currentOccupancy * inputs.totalRooms * 365 + (year5Projection?.incrementalRevenue || 0) * 0.85),
       value: Math.round((year5Projection?.incrementalRevenue || 0) * 0.15 + (year5Projection?.costSavings || 0)),
       type: "positive",
@@ -367,17 +367,17 @@ export function Tab3FiveYear() {
       <div className="grid grid-cols-3 gap-4">
         {[
           {
-            text: `In 5 years, Duetto is projected to generate ${formatCurrency(totalFiveYearNet, currency, true)} in net incremental value for ${inputs.propertyName || "your property"}.`,
+            text: `In 5 years, Duetto is projected to generate ${formatCurrency(totalFiveYearNet, currency, true)} in net incremental value for ${inputs.propertyName || "your property"} — driven by sustained RevPAR improvement on ${Math.round(inputs.yieldablePercent * 100)}% yieldable inventory.`,
             color: "border-gold-500/30 bg-gold-500/5",
             textColor: "text-gold-400",
           },
           {
-            text: `For every $1 invested in Duetto, ${inputs.propertyName || "your property"} receives ${fiveYearROIMultiple.toFixed(1)}x back over 5 years.`,
+            text: `For every $1 invested in Duetto, ${inputs.propertyName || "your property"} receives ${fiveYearROIMultiple.toFixed(1)}x back over 5 years through compounding RevPAR growth and group rate optimization.`,
             color: "border-emerald-brand/30 bg-emerald-brand/5",
             textColor: "text-emerald-brand",
           },
           {
-            text: `The implied property valuation increase from Duetto's revenue impact is ${formatCurrency(valuationImpact, currency, true)} at a ${formatPercent(capRate)} cap rate.`,
+            text: `The implied property valuation increase from Duetto's RevPAR impact is ${formatCurrency(valuationImpact, currency, true)} at a ${formatPercent(capRate)} cap rate.`,
             color: "border-purple-500/30 bg-purple-500/5",
             textColor: "text-purple-400",
           },

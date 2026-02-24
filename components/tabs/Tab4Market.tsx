@@ -127,7 +127,7 @@ export function Tab4Market() {
       current: Math.round(((currentRevPAR - benchmarkRevPAR * 0.8) / (benchmarkRevPAR * 0.4)) * 100),
       market: 50,
     },
-    { metric: "Channel Mix", current: Math.round(inputs.directBookingPercent * 100), market: 40 },
+    { metric: "Yieldable Mix", current: Math.round(inputs.yieldablePercent * 100), market: 70 },
     { metric: "RM Maturity", current: inputs.rmApproach === "spreadsheets" ? 10 : inputs.rmApproach === "competitor-rms" ? 70 : 30, market: 50 },
   ];
 
@@ -201,11 +201,12 @@ export function Tab4Market() {
             </div>
 
             <div className="p-4 rounded-xl border border-white/10 bg-white/3">
-              <p className="text-white/50 text-xs font-sans font-semibold uppercase tracking-wider mb-1">RM Approach Gap</p>
+              <p className="text-white/50 text-xs font-sans font-semibold uppercase tracking-wider mb-1">Yieldable Inventory Opportunity</p>
               <p className="text-white/40 text-xs font-sans leading-relaxed">
+                {Math.round(inputs.yieldablePercent * 100)}% of your room nights are in yieldable segments — the inventory Duetto can dynamically optimize.{" "}
                 {inputs.rmApproach === "spreadsheets" || inputs.rmApproach === "none"
-                  ? "Properties using manual/spreadsheet RM average 8-12% lower RevPAR than those with intelligent RMS platforms. This gap typically widens as market complexity increases."
-                  : "You're already using technology — but Duetto's open pricing and AI-driven forecasting deliver measurable lifts even over competing RMS platforms."}
+                  ? "Properties with manual RM average 8-12% lower RevPAR on yieldable inventory. Duetto closes that gap typically within the first 90 days."
+                  : "Even with an existing system, Duetto's open pricing and AI-driven forecasting deliver measurable RevPAR lifts on yieldable segments."}
               </p>
             </div>
           </div>

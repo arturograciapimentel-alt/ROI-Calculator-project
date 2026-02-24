@@ -62,7 +62,7 @@ export const DEFAULT_ASSUMPTIONS = {
     adrUpliftPercent: 0.03,
     occupancyUpliftPoints: 0.01,
     groupPricingImprovementPercent: 0.02,
-    channelShiftPercent: 0.02,
+    channelShiftPercent: 0, // removed OTA channel shift focus
     laborHoursSavedPerWeek: 0,
     marketGrowthRate: 0.02,
   },
@@ -70,7 +70,7 @@ export const DEFAULT_ASSUMPTIONS = {
     adrUpliftPercent: 0.05,
     occupancyUpliftPoints: 0.02,
     groupPricingImprovementPercent: 0.04,
-    channelShiftPercent: 0.04,
+    channelShiftPercent: 0,
     laborHoursSavedPerWeek: 0,
     marketGrowthRate: 0.025,
   },
@@ -78,7 +78,7 @@ export const DEFAULT_ASSUMPTIONS = {
     adrUpliftPercent: 0.08,
     occupancyUpliftPoints: 0.035,
     groupPricingImprovementPercent: 0.07,
-    channelShiftPercent: 0.06,
+    channelShiftPercent: 0,
     laborHoursSavedPerWeek: 0,
     marketGrowthRate: 0.03,
   },
@@ -98,53 +98,51 @@ export function calculateROI(
   assumptions: ScenarioAssumptions,
   hourlyLaborRate: number
 ): ROIProjection {
-  const { totalRooms, currentADR, currentOccupancy, currency } = inputs;
+  const { totalRooms, currentADR, currentOccupancy } = inputs;
   const currentRevPAR = currentADR * currentOccupancy;
   const annualRooms = totalRooms * 365;
 
-  // New metrics after Duetto
+  // Fraction of room nights the RMS can actually optimize (yieldable segments)
+  // Non-yieldable = group/corporate at static negotiated rates
+  const yieldable = inputs.yieldablePercent ?? (1 - inputs.groupBusinessPercent);
+
+  // New metrics after Duetto on yieldable segments
   const newADR = currentADR * (1 + assumptions.adrUpliftPercent);
   const newOccupancy = Math.min(0.98, currentOccupancy + assumptions.occupancyUpliftPoints);
-  const newRevPAR = newADR * newOccupancy;
+  const yieldableNewRevPAR = newADR * newOccupancy;
 
-  // Incremental ADR revenue (using current occupancy as base)
-  const incrementalADRRevenue = (newADR - currentADR) * currentOccupancy * annualRooms;
+  // Incremental ADR revenue on yieldable rooms (current occ as base)
+  const incrementalADRRevenue = (newADR - currentADR) * currentOccupancy * annualRooms * yieldable;
 
-  // Incremental occupancy revenue (using new ADR as the rate)
-  const incrementalOccRevenue = newADR * (newOccupancy - currentOccupancy) * annualRooms;
+  // Incremental occupancy revenue on yieldable rooms (using new ADR)
+  const incrementalOccRevenue = newADR * (newOccupancy - currentOccupancy) * annualRooms * yieldable;
 
-  // Combined RevPAR uplift (total room revenue impact)
-  const combinedRevPARUplift = (newRevPAR - currentRevPAR) * annualRooms;
+  // Combined RevPAR uplift scaled to yieldable inventory
+  const combinedRevPARUplift = (yieldableNewRevPAR - currentRevPAR) * annualRooms * yieldable;
   const annualIncrementalRoomRevenue = combinedRevPARUplift;
 
-  // Group revenue optimization
-  const currentGroupRevenue =
-    currentRevPAR * totalRooms * 365 * inputs.groupBusinessPercent;
+  // Hotel-wide blended RevPAR after RMS optimization
+  const newRevPAR = currentRevPAR + (yieldableNewRevPAR - currentRevPAR) * yieldable;
+
+  // Group revenue optimization via Blockbuster (on group business)
+  const currentGroupRevenue = currentRevPAR * totalRooms * 365 * inputs.groupBusinessPercent;
   const groupRevenue = inputs.groupBusinessPercent > 0
     ? currentGroupRevenue * assumptions.groupPricingImprovementPercent
     : 0;
 
-  // Distribution cost savings
-  const avgBookingValue = currentADR * 2.5; // avg stay length
-  const totalAnnualBookings = (currentOccupancy * annualRooms) / 2.5;
-  const otaBookings = totalAnnualBookings * inputs.otaPercent;
-  const shiftedBookings = otaBookings * assumptions.channelShiftPercent;
-  const distributionSavings = shiftedBookings * avgBookingValue * inputs.otaCommissionRate;
+  // Distribution savings zeroed out (OTA channel shift removed from model)
+  const distributionSavings = 0;
 
-  // Labor savings
-  const hoursWeeklySaved = Math.min(inputs.hoursPerWeekManual * 0.5, 20); // max 50% of time saved
+  // Labor savings from automation of manual pricing tasks
+  const hoursWeeklySaved = Math.min(inputs.hoursPerWeekManual * 0.5, 20);
   const laborSavings =
     inputs.annualRMLaborCost > 0
       ? inputs.annualRMLaborCost * 0.25
       : hoursWeeklySaved * 52 * hourlyLaborRate;
 
-  // Revenue leakage reduction (pricing errors)
-  const revenueLeak = annualIncrementalRoomRevenue * 0.05;
-
   // Totals
-  const totalIncrementalRevenue =
-    annualIncrementalRoomRevenue + groupRevenue + revenueLeak;
-  const totalCostSavings = distributionSavings + laborSavings;
+  const totalIncrementalRevenue = annualIncrementalRoomRevenue + groupRevenue;
+  const totalCostSavings = laborSavings;
   const totalAnnualImpact = totalIncrementalRevenue + totalCostSavings;
 
   // ROI metrics
@@ -237,6 +235,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   currentADR: 189,
   currentOccupancy: 0.72,
   groupBusinessPercent: 0.35,
+  yieldablePercent: 0.65, // 65% yieldable (non-group transient + some negotiated flex)
   directBookingPercent: 0.42,
   otaPercent: 0.58,
   rmApproach: "spreadsheets",

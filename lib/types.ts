@@ -33,6 +33,7 @@ export interface PropertyInputs {
   currentADR: number;
   currentOccupancy: number; // 0-1
   groupBusinessPercent: number; // 0-1
+  yieldablePercent: number; // 0-1 — fraction of room nights the RMS can optimize
   directBookingPercent: number; // 0-1
   otaPercent: number; // 0-1
 

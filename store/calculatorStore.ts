@@ -43,6 +43,7 @@ const DEFAULT_INPUTS: PropertyInputs = {
   currentADR: 150,
   currentOccupancy: 0.70,
   groupBusinessPercent: 0.20,
+  yieldablePercent: 0.75, // 75% yieldable by default
   directBookingPercent: 0.40,
   otaPercent: 0.60,
   rmApproach: "spreadsheets",

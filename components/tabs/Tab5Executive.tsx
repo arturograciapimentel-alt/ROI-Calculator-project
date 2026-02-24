@@ -36,10 +36,12 @@ export function Tab5Executive() {
   const incrementalNOI = (yearlyProjections[4]?.totalImpact || 0) * 0.85;
   const valuationImpact = incrementalNOI / capRate;
 
+  const adrContrib = proj.incrementalADRRevenue;
+  const occContrib = proj.incrementalOccRevenue;
+  const total = adrContrib + occContrib || 1;
   const pieData = [
-    { name: "ADR Uplift", value: Math.max(proj.annualIncrementalRoomRevenue * 0.6, 0) },
-    { name: "Occ. Uplift", value: Math.max(proj.annualIncrementalRoomRevenue * 0.4 + proj.groupRevenue, 0) },
-    { name: "Distribution", value: Math.max(proj.distributionSavings, 0) },
+    { name: "ADR Uplift", value: Math.max(proj.annualIncrementalRoomRevenue * (adrContrib / total), 0) },
+    { name: "Occ. Uplift", value: Math.max(proj.annualIncrementalRoomRevenue * (occContrib / total) + proj.groupRevenue, 0) },
     { name: "Labor Savings", value: Math.max(proj.laborSavings, 0) },
   ].filter((d) => d.value > 0);
 
@@ -206,7 +208,7 @@ export function Tab5Executive() {
                     ["Current ADR", formatCurrency(inputs.currentADR, currency)],
                     ["Current Occupancy", formatPercent(inputs.currentOccupancy)],
                     ["Current RevPAR", formatCurrency(currentRevPAR, currency)],
-                    ["Annual Room Revenue", formatCurrency(annualRevenue, currency, true)],
+                    ["Yieldable Mix", `${Math.round(inputs.yieldablePercent * 100)}% of room nights`],
                     ["RM Approach", RM_APPROACH_LABELS[inputs.rmApproach]],
                   ].map(([k, v]) => (
                     <div key={k} className="flex items-center gap-3 py-1.5 border-b border-white/5">
@@ -223,19 +225,25 @@ export function Tab5Executive() {
               <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">
                 Financial Impact Summary — Moderate Scenario
               </p>
-              <div className="grid grid-cols-3 gap-5">
+              <div className="grid grid-cols-4 gap-4">
                 {[
+                  {
+                    label: "RevPAR Improvement",
+                    value: `+${currentRevPAR > 0 ? (((proj.newRevPAR - currentRevPAR) / currentRevPAR) * 100).toFixed(1) : "0"}%`,
+                    sub: `${formatCurrency(currentRevPAR, currency)} → ${formatCurrency(proj.newRevPAR, currency)}`,
+                    variant: "emerald",
+                  },
                   {
                     label: "Annual Financial Impact",
                     value: formatCurrency(proj.totalAnnualImpact, currency, true),
-                    sub: "Revenue uplift + cost savings",
+                    sub: "Revenue uplift + labor savings",
                     variant: "gold",
                   },
                   {
                     label: "ROI Multiple",
                     value: `${proj.roiMultiple.toFixed(1)}x`,
                     sub: "Return on Duetto investment",
-                    variant: "emerald",
+                    variant: "default",
                   },
                   {
                     label: "Payback Period",
@@ -370,9 +378,9 @@ export function Tab5Executive() {
                 </div>
                 <div className="flex flex-col justify-center">
                   <p className="text-white/70 text-sm font-sans leading-relaxed">
-                    <span className="text-gold-400 font-semibold">For every $1 invested in Duetto,</span>{" "}
-                    {inputs.propertyName || "your property"} receives{" "}
-                    <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> back annually —
+                    <span className="text-emerald-brand font-semibold">RevPAR improvement of {currentRevPAR > 0 ? (((proj.newRevPAR - currentRevPAR) / currentRevPAR) * 100).toFixed(1) : "0"}%</span>{" "}
+                    on {Math.round(inputs.yieldablePercent * 100)}% yieldable inventory delivers{" "}
+                    <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> ROI annually —
                     and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years.
                   </p>
                   <p className="text-white/40 text-xs font-sans mt-3">
