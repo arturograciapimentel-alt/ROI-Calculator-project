@@ -98,6 +98,41 @@ export interface YearlyProjection {
   roiPercent: number;
 }
 
+export interface CoStarClassMetrics {
+  rooms: number;
+  occupancy: number; // 0–1
+  adr: number;
+  revpar: number;
+}
+
+export interface CoStarHistoricalRow {
+  year: number;
+  occupancy: number; // 0–1
+  adr: number;
+  revpar: number;
+  isForecast: boolean;
+}
+
+export interface CoStarSubmarket {
+  name: string;
+  occupancy: number; // 0–1
+  adr: number;
+  revpar: number;
+}
+
+export interface CoStarBenchmark {
+  marketName: string;
+  reportDate: string;
+  overall: CoStarClassMetrics;
+  byClass: {
+    luxuryUpperUpscale: CoStarClassMetrics;
+    upscaleUpperMidscale: CoStarClassMetrics;
+    midscaleEconomy: CoStarClassMetrics;
+  };
+  submarkets: CoStarSubmarket[];
+  historical: CoStarHistoricalRow[];
+}
+
 export interface CalculatorState {
   activeTab: number;
   inputs: PropertyInputs;
@@ -117,4 +152,5 @@ export interface CalculatorState {
   hourlyLaborRate: number;
   preparedBy: string;
   nextSteps: string;
+  costarBenchmark: CoStarBenchmark | null;
 }

@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   CalculatorState,
+  CoStarBenchmark,
   PropertyInputs,
   Scenario,
   ScenarioAssumptions,
@@ -30,6 +31,7 @@ type CalculatorStore = CalculatorState & {
   setHourlyLaborRate: (rate: number) => void;
   setPreparedBy: (name: string) => void;
   setNextSteps: (steps: string) => void;
+  setCostarBenchmark: (data: CoStarBenchmark | null) => void;
 };
 
 const DEFAULT_INPUTS: PropertyInputs = {
@@ -105,6 +107,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       capRate: 0.075,
       hourlyLaborRate: 50,
       preparedBy: "",
+      costarBenchmark: null,
       nextSteps:
         "• Schedule a 60-minute technical demo with the Duetto implementation team\n• Review integration requirements with your PMS vendor\n• Connect with references from similar properties in your market",
 
@@ -190,6 +193,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
       setPreparedBy: (preparedBy) => set({ preparedBy }),
       setNextSteps: (nextSteps) => set({ nextSteps }),
+      setCostarBenchmark: (costarBenchmark) => set({ costarBenchmark }),
     }),
     {
       name: "duetto-roi-calculator",
