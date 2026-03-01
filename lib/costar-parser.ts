@@ -176,6 +176,7 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
   const submarkets = extractSubmarkets(text);
 
   const benchmark: CoStarBenchmark = {
+    id: `costar-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     marketName,
     reportDate,
     overall: overall ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },

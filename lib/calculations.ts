@@ -320,5 +320,6 @@ export function createPortfolioProperty(
     yieldablePercent: inputs.yieldablePercent,
     annualRMLaborCost: inputs.annualRMLaborCost,
     duettoAnnualCost: inputs.duettoAnnualCost,
+    marketReportId: null,
   };
 }

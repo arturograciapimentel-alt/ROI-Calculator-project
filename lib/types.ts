@@ -10,6 +10,7 @@ export interface PortfolioProperty {
   yieldablePercent: number; // 0-1
   annualRMLaborCost: number;
   duettoAnnualCost: number; // 0 = auto-estimate
+  marketReportId: string | null; // ID of the CoStarBenchmark assigned to this property
 }
 
 // CoStar hotel class — aligns directly with CoStar Hospitality Market Report segments
@@ -129,6 +130,7 @@ export interface CoStarSubmarket {
 }
 
 export interface CoStarBenchmark {
+  id: string;
   marketName: string;
   reportDate: string;
   overall: CoStarClassMetrics;
@@ -161,5 +163,5 @@ export interface CalculatorState {
   hourlyLaborRate: number;
   preparedBy: string;
   nextSteps: string;
-  costarBenchmark: CoStarBenchmark | null;
+  costarBenchmarks: CoStarBenchmark[];
 }

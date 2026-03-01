@@ -5,7 +5,7 @@ import { InputField, TextInput, SelectInput, SliderInput, StarRating } from "@/c
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost } from "@/lib/calculations";
-import type { PortfolioProperty, PropertyInputs, PropertyType } from "@/lib/types";
+import type { CoStarBenchmark, PortfolioProperty, PropertyInputs, PropertyType } from "@/lib/types";
 
 function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
   const fields = [
@@ -38,6 +38,7 @@ function PortfolioPropertyCard({
   property,
   sym,
   currency,
+  costarBenchmarks,
   onUpdate,
   onRemove,
 }: {
@@ -45,6 +46,7 @@ function PortfolioPropertyCard({
   property: PortfolioProperty;
   sym: string;
   currency: string;
+  costarBenchmarks: CoStarBenchmark[];
   onUpdate: (updates: Partial<Omit<PortfolioProperty, "id">>) => void;
   onRemove: () => void;
 }) {
@@ -108,6 +110,33 @@ function PortfolioPropertyCard({
             placeholder="200"
           />
         </InputField>
+      </div>
+
+      {/* Market report assignment row */}
+      <div className="grid grid-cols-3 gap-4">
+        <InputField
+          label="Market Report"
+          tooltip={costarBenchmarks.length === 0
+            ? "Upload a CoStar market report in the Market Context tab, then assign it here"
+            : "Assign the CoStar market report that covers this property's location"}
+        >
+          <SelectInput
+            value={property.marketReportId || ""}
+            onChange={(e) => onUpdate({ marketReportId: e.target.value || null })}
+          >
+            <option value="">No market report</option>
+            {costarBenchmarks.map((b) => (
+              <option key={b.id} value={b.id}>{b.marketName}</option>
+            ))}
+          </SelectInput>
+        </InputField>
+        {property.marketReportId && (
+          <div className="col-span-2 flex items-end pb-1">
+            <p className="text-emerald-brand/70 text-[10px] font-sans">
+              ✓ {costarBenchmarks.find((b) => b.id === property.marketReportId)?.reportDate || "CoStar data"} — market benchmarks active for this property
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Performance row */}
@@ -190,6 +219,7 @@ export function Tab1PropertyProfile() {
     portfolioProperties,
     updatePortfolioProperty,
     setPortfolioProperties,
+    costarBenchmarks,
   } = useCalculatorStore();
 
   const sym = CURRENCY_SYMBOLS[inputs.currency] || "$";
@@ -393,6 +423,7 @@ export function Tab1PropertyProfile() {
                 property={prop}
                 sym={sym}
                 currency={inputs.currency}
+                costarBenchmarks={costarBenchmarks}
                 onUpdate={(updates) => updatePortfolioProperty(prop.id, updates)}
                 onRemove={() => handleRemoveProperty(prop.id)}
               />

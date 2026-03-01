@@ -34,7 +34,8 @@ type CalculatorStore = CalculatorState & {
   setHourlyLaborRate: (rate: number) => void;
   setPreparedBy: (name: string) => void;
   setNextSteps: (steps: string) => void;
-  setCostarBenchmark: (data: CoStarBenchmark | null) => void;
+  addCostarBenchmark: (data: CoStarBenchmark) => void;
+  removeCostarBenchmark: (id: string) => void;
   setPortfolioProperties: (props: PortfolioProperty[]) => void;
   updatePortfolioProperty: (id: string, updates: Partial<Omit<PortfolioProperty, "id">>) => void;
 };
@@ -118,7 +119,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       capRate: 0.075,
       hourlyLaborRate: 50,
       preparedBy: "",
-      costarBenchmark: null,
+      costarBenchmarks: [],
       nextSteps:
         "• Schedule a 60-minute technical demo with the Duetto implementation team\n• Review integration requirements with your PMS vendor\n• Connect with references from similar properties in your market",
 
@@ -264,7 +265,29 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
       setPreparedBy: (preparedBy) => set({ preparedBy }),
       setNextSteps: (nextSteps) => set({ nextSteps }),
-      setCostarBenchmark: (costarBenchmark) => set({ costarBenchmark }),
+
+      addCostarBenchmark: (data) => {
+        const state = get();
+        // Replace if same market name already exists, otherwise append
+        const exists = state.costarBenchmarks.findIndex(
+          (b) => b.marketName === data.marketName
+        );
+        const costarBenchmarks =
+          exists >= 0
+            ? state.costarBenchmarks.map((b, i) => (i === exists ? data : b))
+            : [...state.costarBenchmarks, data];
+        set({ costarBenchmarks });
+      },
+
+      removeCostarBenchmark: (id) => {
+        const state = get();
+        const costarBenchmarks = state.costarBenchmarks.filter((b) => b.id !== id);
+        // Clear marketReportId from any portfolio properties that referenced this benchmark
+        const portfolioProperties = state.portfolioProperties.map((p) =>
+          p.marketReportId === id ? { ...p, marketReportId: null } : p
+        );
+        set({ costarBenchmarks, portfolioProperties });
+      },
     }),
     {
       name: "duetto-roi-calculator",
