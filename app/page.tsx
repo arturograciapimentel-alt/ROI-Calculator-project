@@ -77,7 +77,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top header */}
-      <header className="sticky top-0 z-50 border-b border-white/8 bg-navy-950/90 backdrop-blur-xl no-print">
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-navy-900/90 backdrop-blur-xl no-print">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
