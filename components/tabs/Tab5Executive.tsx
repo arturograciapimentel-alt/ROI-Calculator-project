@@ -2,6 +2,7 @@
 import React, { useRef, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
+import { DuettoIcon, DuettoWordmark } from "@/components/ui/DuettoLogo";
 import {
   formatCurrency,
   formatPercent,
@@ -161,10 +162,7 @@ export function Tab5Executive() {
           <div className="bg-navy-950 border-b border-white/10 px-8 py-6 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <div className="w-8 h-8 rounded-lg bg-emerald-brand flex items-center justify-center">
-                  <span className="text-navy-950 font-bold text-sm font-sans">D</span>
-                </div>
-                <span className="text-emerald-brand font-sans font-bold text-lg tracking-wide">DUETTO</span>
+                <DuettoWordmark height={38} />
                 <div className="w-px h-5 bg-white/20" />
                 <span className="text-white/40 text-sm font-sans">Revenue Profit OS</span>
               </div>
@@ -457,9 +455,7 @@ export function Tab5Executive() {
             {/* Footer */}
             <div className="flex items-center justify-between pt-4 border-t border-white/10">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-emerald-brand flex items-center justify-center">
-                  <span className="text-navy-950 font-bold text-xs">D</span>
-                </div>
+                <DuettoIcon size={22} />
                 <span className="text-white/30 text-xs font-sans">duettocloud.com</span>
               </div>
               <p className="text-white/20 text-xs font-sans">

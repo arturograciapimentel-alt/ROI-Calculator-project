@@ -8,6 +8,7 @@ import { Tab3FiveYear } from "@/components/tabs/Tab3FiveYear";
 import { Tab4Market } from "@/components/tabs/Tab4Market";
 import { Tab5Executive } from "@/components/tabs/Tab5Executive";
 import { formatCurrency, estimateDuettoCost } from "@/lib/calculations";
+import { DuettoIcon, DuettoWordmark } from "@/components/ui/DuettoLogo";
 import { clsx } from "clsx";
 
 function LiveROIBadge() {
@@ -64,9 +65,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 rounded-xl bg-emerald-brand/20 border border-emerald-brand/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-emerald-brand font-bold text-lg">D</span>
-          </div>
+          <DuettoIcon size={48} className="mx-auto mb-4 opacity-60 animate-pulse" />
           <p className="text-white/30 text-sm font-sans">Loading Duetto ROI Calculator...</p>
         </div>
       </div>
@@ -82,17 +81,11 @@ export default function HomePage() {
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-brand flex items-center justify-center shadow-emerald">
-              <span className="text-navy-950 font-bold font-sans text-base leading-none">D</span>
-            </div>
-            <div>
-              <p className="text-emerald-brand font-sans font-bold text-base leading-none tracking-widest">
-                DUETTO
-              </p>
-              <p className="text-white/25 text-[9px] font-sans tracking-[0.15em] uppercase leading-none mt-0.5">
-                ROI Calculator
-              </p>
-            </div>
+            <DuettoWordmark height={30} />
+            <div className="w-px h-6 bg-white/15 hidden sm:block" />
+            <p className="text-white/30 text-[10px] font-sans tracking-[0.15em] uppercase hidden sm:block">
+              ROI Calculator
+            </p>
           </div>
 
           {/* Navigation */}
