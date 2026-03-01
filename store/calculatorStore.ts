@@ -36,11 +36,10 @@ type CalculatorStore = CalculatorState & {
 
 const DEFAULT_INPUTS: PropertyInputs = {
   propertyName: "",
-  propertyType: "full-service",
+  propertyType: "upscale-upper-midscale",
   totalRooms: 200,
   starRating: 4,
   location: "",
-  marketTier: "primary",
   currency: "USD",
   currentADR: 150,
   currentOccupancy: 0.70,

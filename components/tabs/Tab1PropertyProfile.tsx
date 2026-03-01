@@ -119,18 +119,14 @@ export function Tab1PropertyProfile() {
             />
           </InputField>
 
-          <InputField label="Property Type">
+          <InputField label="Hotel Class (CoStar)" tooltip="Matches CoStar's hotel class segments — used for benchmark comparison">
             <SelectInput
               value={inputs.propertyType}
               onChange={(e) => update("propertyType", e.target.value as PropertyInputs["propertyType"])}
             >
-              <option value="full-service">Full-Service Hotel</option>
-              <option value="select-service">Select-Service</option>
-              <option value="resort">Resort</option>
-              <option value="casino">Casino Resort</option>
-              <option value="extended-stay">Extended Stay</option>
-              <option value="boutique">Boutique/Lifestyle</option>
-              <option value="all-inclusive">All-Inclusive</option>
+              <option value="luxury-upper-upscale">Luxury &amp; Upper Upscale</option>
+              <option value="upscale-upper-midscale">Upscale &amp; Upper Midscale</option>
+              <option value="midscale-economy">Midscale &amp; Economy</option>
             </SelectInput>
           </InputField>
 
@@ -140,17 +136,6 @@ export function Tab1PropertyProfile() {
               onChange={(e) => update("location", e.target.value)}
               placeholder="e.g. New York, NY"
             />
-          </InputField>
-
-          <InputField label="Market Tier">
-            <SelectInput
-              value={inputs.marketTier}
-              onChange={(e) => update("marketTier", e.target.value as PropertyInputs["marketTier"])}
-            >
-              <option value="primary">Primary/Gateway</option>
-              <option value="secondary">Secondary</option>
-              <option value="tertiary">Tertiary/Resort</option>
-            </SelectInput>
           </InputField>
 
           <InputField label="Total Rooms" required tooltip="Total number of sellable guest rooms/suites">

@@ -7,7 +7,6 @@ import {
   formatPercent,
   estimateDuettoCost,
   PROPERTY_TYPE_LABELS,
-  MARKET_TIER_LABELS,
   RM_APPROACH_LABELS,
 } from "@/lib/calculations";
 import { clsx } from "clsx";
@@ -189,9 +188,9 @@ export function Tab5Executive() {
                 <div className="space-y-2">
                   {[
                     ["Property", inputs.propertyName || "—"],
-                    ["Type", PROPERTY_TYPE_LABELS[inputs.propertyType]],
+                    ["Class", PROPERTY_TYPE_LABELS[inputs.propertyType]],
                     ["Total Rooms", inputs.totalRooms.toString()],
-                    ["Market", `${inputs.location || "—"} (${MARKET_TIER_LABELS[inputs.marketTier]})`],
+                    ["Location", inputs.location || "—"],
                     ["Star Rating", "★".repeat(inputs.starRating)],
                   ].map(([k, v]) => (
                     <div key={k} className="flex items-center gap-3 py-1.5 border-b border-white/5">

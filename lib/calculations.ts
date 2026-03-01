@@ -226,11 +226,10 @@ export function estimateDuettoCost(rooms: number): number {
 
 export const SAMPLE_PROPERTY: PropertyInputs = {
   propertyName: "The Grand Metropolitan Hotel",
-  propertyType: "full-service",
+  propertyType: "luxury-upper-upscale",
   totalRooms: 350,
   starRating: 4,
   location: "New York, NY",
-  marketTier: "primary",
   currency: "USD",
   currentADR: 189,
   currentOccupancy: 0.72,
@@ -249,20 +248,11 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   duettoAnnualCost: 42000,
 };
 
+// Labels match CoStar's hotel class segments exactly
 export const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  "full-service": "Full-Service Hotel",
-  "select-service": "Select-Service",
-  "resort": "Resort",
-  "casino": "Casino Resort",
-  "extended-stay": "Extended Stay",
-  "boutique": "Boutique/Lifestyle",
-  "all-inclusive": "All-Inclusive",
-};
-
-export const MARKET_TIER_LABELS: Record<string, string> = {
-  primary: "Primary/Gateway",
-  secondary: "Secondary",
-  tertiary: "Tertiary/Resort",
+  "luxury-upper-upscale": "Luxury & Upper Upscale",
+  "upscale-upper-midscale": "Upscale & Upper Midscale",
+  "midscale-economy": "Midscale & Economy",
 };
 
 export const RM_APPROACH_LABELS: Record<string, string> = {

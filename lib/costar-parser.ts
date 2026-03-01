@@ -180,9 +180,9 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
     reportDate,
     overall: overall ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
     byClass: {
-      luxuryUpperUpscale: lux ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
-      upscaleUpperMidscale: ups ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
-      midscaleEconomy: mid ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
+      "luxury-upper-upscale": lux ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
+      "upscale-upper-midscale": ups ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
+      "midscale-economy": mid ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
     },
     submarkets,
     historical,

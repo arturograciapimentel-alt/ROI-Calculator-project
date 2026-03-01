@@ -2,75 +2,17 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { formatCurrency, MARKET_TIER_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/calculations";
-import type { CoStarBenchmark, CoStarClassMetrics, PropertyType } from "@/lib/types";
+import { formatCurrency, PROPERTY_TYPE_LABELS } from "@/lib/calculations";
+import type { CoStarBenchmark, CoStarClassMetrics } from "@/lib/types";
 import { clsx } from "clsx";
 
-// ─── Static fallback benchmarks ──────────────────────────────────────────────
-
-const BENCHMARKS: Record<string, Record<string, { adr: [number, number]; occ: [number, number] }>> = {
-  "full-service": {
-    primary: { adr: [180, 280], occ: [0.70, 0.80] },
-    secondary: { adr: [120, 190], occ: [0.65, 0.75] },
-    tertiary: { adr: [100, 160], occ: [0.60, 0.70] },
-  },
-  "select-service": {
-    primary: { adr: [130, 190], occ: [0.72, 0.82] },
-    secondary: { adr: [90, 140], occ: [0.68, 0.78] },
-    tertiary: { adr: [75, 120], occ: [0.62, 0.72] },
-  },
-  resort: {
-    primary: { adr: [250, 500], occ: [0.65, 0.80] },
-    secondary: { adr: [160, 320], occ: [0.60, 0.75] },
-    tertiary: { adr: [120, 250], occ: [0.55, 0.72] },
-  },
-  casino: {
-    primary: { adr: [150, 280], occ: [0.80, 0.92] },
-    secondary: { adr: [100, 200], occ: [0.75, 0.88] },
-    tertiary: { adr: [80, 160], occ: [0.70, 0.84] },
-  },
-  boutique: {
-    primary: { adr: [200, 380], occ: [0.68, 0.80] },
-    secondary: { adr: [140, 260], occ: [0.62, 0.75] },
-    tertiary: { adr: [110, 200], occ: [0.58, 0.70] },
-  },
-  "extended-stay": {
-    primary: { adr: [100, 160], occ: [0.78, 0.90] },
-    secondary: { adr: [75, 130], occ: [0.75, 0.87] },
-    tertiary: { adr: [60, 110], occ: [0.70, 0.84] },
-  },
-  "all-inclusive": {
-    primary: { adr: [280, 600], occ: [0.72, 0.88] },
-    secondary: { adr: [180, 380], occ: [0.68, 0.82] },
-    tertiary: { adr: [120, 280], occ: [0.62, 0.78] },
-  },
+// ─── Static fallback benchmarks (used when no CoStar report is uploaded) ─────
+// Keyed to CoStar hotel classes; represents broad US market averages.
+const BENCHMARKS: Record<string, { adr: [number, number]; occ: [number, number] }> = {
+  "luxury-upper-upscale":   { adr: [250, 480], occ: [0.75, 0.87] },
+  "upscale-upper-midscale": { adr: [140, 270], occ: [0.72, 0.87] },
+  "midscale-economy":       { adr: [80,  170], occ: [0.65, 0.80] },
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function coStarClassForPropertyType(pt: PropertyType): keyof CoStarBenchmark["byClass"] {
-  switch (pt) {
-    case "full-service":
-    case "boutique":
-    case "resort":
-    case "casino":
-    case "all-inclusive":
-      return "luxuryUpperUpscale";
-    case "select-service":
-    case "extended-stay":
-      return "upscaleUpperMidscale";
-    default:
-      return "upscaleUpperMidscale";
-  }
-}
-
-function coStarClassLabel(key: keyof CoStarBenchmark["byClass"]): string {
-  return key === "luxuryUpperUpscale"
-    ? "Luxury & Upper Upscale"
-    : key === "upscaleUpperMidscale"
-    ? "Upscale & Upper Midscale"
-    : "Midscale & Economy";
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -294,17 +236,17 @@ export function Tab4Market() {
   let benchmarkOcc: number;
   let benchmarkRevPAR: number;
   let benchmarkSource: "costar" | "static" = "static";
-  let costarClassKey: keyof CoStarBenchmark["byClass"] | null = null;
+  // propertyType IS the CoStar class key — no mapping needed
+  const costarClassKey = inputs.propertyType as keyof CoStarBenchmark["byClass"];
 
   if (costarBenchmark) {
     benchmarkSource = "costar";
-    costarClassKey = coStarClassForPropertyType(inputs.propertyType);
     const cls = costarBenchmark.byClass[costarClassKey];
     benchmarkADR = cls.adr;
     benchmarkOcc = cls.occupancy;
     benchmarkRevPAR = cls.revpar;
   } else {
-    const bench = BENCHMARKS[inputs.propertyType]?.[inputs.marketTier] ?? BENCHMARKS["full-service"]["primary"];
+    const bench = BENCHMARKS[inputs.propertyType] ?? BENCHMARKS["upscale-upper-midscale"];
     benchmarkADR = (bench.adr[0] + bench.adr[1]) / 2;
     benchmarkOcc = (bench.occ[0] + bench.occ[1]) / 2;
     benchmarkRevPAR = benchmarkADR * benchmarkOcc;
@@ -361,7 +303,7 @@ export function Tab4Market() {
       const { parseCoStarPDF } = await import("@/lib/costar-parser");
       const { benchmark, warnings: w } = await parseCoStarPDF(file);
 
-      if (!benchmark.overall.adr && !benchmark.byClass.luxuryUpperUpscale.adr) {
+      if (!benchmark.overall.adr && !benchmark.byClass["luxury-upper-upscale"].adr) {
         setUploadError(
           "Could not extract performance data from this PDF. Make sure it is a CoStar Hospitality Market Report."
         );
@@ -402,8 +344,7 @@ export function Tab4Market() {
           <div>
             <h3 className="text-white font-serif font-semibold">Industry Benchmark Comparison</h3>
             <p className="text-white/40 text-xs font-sans mt-0.5">
-              {PROPERTY_TYPE_LABELS[inputs.propertyType]} ·{" "}
-              {MARKET_TIER_LABELS[inputs.marketTier]} Market · {inputs.totalRooms} rooms
+              {PROPERTY_TYPE_LABELS[inputs.propertyType]} · {inputs.totalRooms} rooms
               {benchmarkSource === "costar" && costarBenchmark && (
                 <span className="ml-2 inline-flex items-center gap-1 text-emerald-brand">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -437,14 +378,14 @@ export function Tab4Market() {
           <div className="grid grid-cols-3 gap-3 mb-5">
             {(
               [
-                ["luxuryUpperUpscale", "Luxury & Upper Upscale"],
-                ["upscaleUpperMidscale", "Upscale & Upper Midscale"],
-                ["midscaleEconomy", "Midscale & Economy"],
-              ] as [keyof CoStarBenchmark["byClass"], string][]
-            ).map(([key, label]) => (
+                "luxury-upper-upscale",
+                "upscale-upper-midscale",
+                "midscale-economy",
+              ] as (keyof CoStarBenchmark["byClass"])[]
+            ).map((key) => (
               <CoStarClassCard
                 key={key}
-                label={label}
+                label={PROPERTY_TYPE_LABELS[key]}
                 metrics={costarBenchmark.byClass[key]}
                 currency={currency}
                 highlighted={key === costarClassKey}

@@ -1,13 +1,8 @@
+// CoStar hotel class — aligns directly with CoStar Hospitality Market Report segments
 export type PropertyType =
-  | "full-service"
-  | "select-service"
-  | "resort"
-  | "casino"
-  | "extended-stay"
-  | "boutique"
-  | "all-inclusive";
-
-export type MarketTier = "primary" | "secondary" | "tertiary";
+  | "luxury-upper-upscale"
+  | "upscale-upper-midscale"
+  | "midscale-economy";
 
 export type RMApproach =
   | "spreadsheets"
@@ -26,7 +21,6 @@ export interface PropertyInputs {
   totalRooms: number;
   starRating: number;
   location: string;
-  marketTier: MarketTier;
   currency: Currency;
 
   // Current Performance
@@ -125,9 +119,9 @@ export interface CoStarBenchmark {
   reportDate: string;
   overall: CoStarClassMetrics;
   byClass: {
-    luxuryUpperUpscale: CoStarClassMetrics;
-    upscaleUpperMidscale: CoStarClassMetrics;
-    midscaleEconomy: CoStarClassMetrics;
+    "luxury-upper-upscale": CoStarClassMetrics;
+    "upscale-upper-midscale": CoStarClassMetrics;
+    "midscale-economy": CoStarClassMetrics;
   };
   submarkets: CoStarSubmarket[];
   historical: CoStarHistoricalRow[];
