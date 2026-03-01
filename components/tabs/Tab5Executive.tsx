@@ -6,6 +6,7 @@ import {
   formatCurrency,
   formatPercent,
   estimateDuettoCost,
+  aggregatePortfolioInputs,
   PROPERTY_TYPE_LABELS,
   RM_APPROACH_LABELS,
 } from "@/lib/calculations";
@@ -16,18 +17,20 @@ const PIE_COLORS = ["#D4A853", "#00C389", "#818cf8", "#fb923c"];
 export function Tab5Executive() {
   const {
     inputs, projections, scenario, yearlyProjections, capRate,
-    preparedBy, nextSteps, setPreparedBy, setNextSteps,
+    preparedBy, nextSteps, setPreparedBy, setNextSteps, portfolioProperties,
   } = useCalculatorStore();
 
   const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const currency = inputs.currency;
+  const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
+  const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
   const proj = projections.moderate;
   const conservProj = projections.conservative;
-  const effectiveCost = inputs.duettoAnnualCost || estimateDuettoCost(inputs.totalRooms);
-  const currentRevPAR = inputs.currentADR * inputs.currentOccupancy;
-  const annualRevenue = currentRevPAR * inputs.totalRooms * 365;
+  const effectiveCost = effectiveInputs.duettoAnnualCost || estimateDuettoCost(effectiveInputs.totalRooms);
+  const currentRevPAR = effectiveInputs.currentADR * effectiveInputs.currentOccupancy;
+  const annualRevenue = currentRevPAR * effectiveInputs.totalRooms * 365;
   const totalFiveYearNet = yearlyProjections.reduce((s, y) => s + y.netBenefit, 0);
   const totalFiveYearImpact = yearlyProjections.reduce((s, y) => s + y.totalImpact, 0);
   const totalFiveYearInvestment = yearlyProjections.reduce((s, y) => s + y.duettoInvestment, 0);
@@ -184,12 +187,15 @@ export function Tab5Executive() {
             {/* Property Snapshot */}
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">Property Profile</p>
+                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">
+                  {isPortfolioMode ? "Portfolio Profile" : "Property Profile"}
+                </p>
                 <div className="space-y-2">
                   {[
-                    ["Property", inputs.propertyName || "—"],
+                    [isPortfolioMode ? "Portfolio" : "Property", inputs.propertyName || "—"],
+                    ...(isPortfolioMode ? [["Properties", portfolioProperties.length.toString()]] : []),
                     ["Class", PROPERTY_TYPE_LABELS[inputs.propertyType]],
-                    ["Total Rooms", inputs.totalRooms.toString()],
+                    ["Total Rooms", effectiveInputs.totalRooms.toLocaleString()],
                     ["Location", inputs.location || "—"],
                     ["Star Rating", "★".repeat(inputs.starRating)],
                   ].map(([k, v]) => (
@@ -201,13 +207,15 @@ export function Tab5Executive() {
                 </div>
               </div>
               <div>
-                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">Current Performance</p>
+                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">
+                  {isPortfolioMode ? "Portfolio Performance (Blended)" : "Current Performance"}
+                </p>
                 <div className="space-y-2">
                   {[
-                    ["Current ADR", formatCurrency(inputs.currentADR, currency)],
-                    ["Current Occupancy", formatPercent(inputs.currentOccupancy)],
-                    ["Current RevPAR", formatCurrency(currentRevPAR, currency)],
-                    ["Yieldable Mix", `${Math.round(inputs.yieldablePercent * 100)}% of room nights`],
+                    [isPortfolioMode ? "Blended ADR" : "Current ADR", formatCurrency(effectiveInputs.currentADR, currency)],
+                    [isPortfolioMode ? "Blended Occupancy" : "Current Occupancy", formatPercent(effectiveInputs.currentOccupancy)],
+                    [isPortfolioMode ? "Portfolio RevPAR" : "Current RevPAR", formatCurrency(currentRevPAR, currency)],
+                    ["Yieldable Mix", `${Math.round(effectiveInputs.yieldablePercent * 100)}% of room nights`],
                     ["RM Approach", RM_APPROACH_LABELS[inputs.rmApproach]],
                   ].map(([k, v]) => (
                     <div key={k} className="flex items-center gap-3 py-1.5 border-b border-white/5">
@@ -218,6 +226,47 @@ export function Tab5Executive() {
                 </div>
               </div>
             </div>
+
+            {/* Portfolio Breakdown — shown when portfolio mode is active */}
+            {isPortfolioMode && (
+              <div>
+                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">Portfolio Composition</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs font-sans">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        {["Property", "Class", "Rooms", "ADR", "Occupancy", "RevPAR"].map((h) => (
+                          <th key={h} className="text-left text-white/40 pb-2 pr-4 uppercase tracking-wider font-normal">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {portfolioProperties.map((p) => {
+                        const pRevPAR = p.currentADR * p.currentOccupancy;
+                        return (
+                          <tr key={p.id}>
+                            <td className="py-1.5 pr-4 text-white font-medium">{p.propertyName || "—"}</td>
+                            <td className="py-1.5 pr-4 text-white/50">{PROPERTY_TYPE_LABELS[p.propertyType] ?? p.propertyType}</td>
+                            <td className="py-1.5 pr-4 text-white/70">{p.totalRooms}</td>
+                            <td className="py-1.5 pr-4 text-white/70">{formatCurrency(p.currentADR, currency)}</td>
+                            <td className="py-1.5 pr-4 text-white/70">{formatPercent(p.currentOccupancy)}</td>
+                            <td className="py-1.5 text-emerald-brand font-semibold">{formatCurrency(pRevPAR, currency)}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="border-t border-gold-500/30">
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">Portfolio Blended</td>
+                        <td className="py-1.5 pr-4 text-white/40">—</td>
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{effectiveInputs.totalRooms}</td>
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{formatCurrency(effectiveInputs.currentADR, currency)}</td>
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{formatPercent(effectiveInputs.currentOccupancy)}</td>
+                        <td className="py-1.5 text-gold-400 font-semibold">{formatCurrency(currentRevPAR, currency)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Hero KPIs */}
             <div>
@@ -378,7 +427,7 @@ export function Tab5Executive() {
                 <div className="flex flex-col justify-center">
                   <p className="text-white/70 text-sm font-sans leading-relaxed">
                     <span className="text-emerald-brand font-semibold">RevPAR improvement of {currentRevPAR > 0 ? (((proj.newRevPAR - currentRevPAR) / currentRevPAR) * 100).toFixed(1) : "0"}%</span>{" "}
-                    on {Math.round(inputs.yieldablePercent * 100)}% yieldable inventory delivers{" "}
+                    on {Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory{isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""} delivers{" "}
                     <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> ROI annually —
                     and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years.
                   </p>

@@ -6,7 +6,7 @@ import {
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, SliderInput } from "@/components/ui/InputField";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, formatPercent, estimateDuettoCost } from "@/lib/calculations";
+import { formatCurrency, formatPercent, estimateDuettoCost, aggregatePortfolioInputs } from "@/lib/calculations";
 import type { Scenario, ScenarioAssumptions } from "@/lib/types";
 import { clsx } from "clsx";
 
@@ -68,11 +68,13 @@ function ExplanationCard({ title, body, color = "gold" }: ExplanationCardProps) 
 }
 
 export function Tab2ROIProjection() {
-  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption } = useCalculatorStore();
+  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties } = useCalculatorStore();
   const proj = projections[scenario];
   const currency = inputs.currency;
-  const effectiveCost = inputs.duettoAnnualCost || estimateDuettoCost(inputs.totalRooms);
-  const currentRevPAR = inputs.currentADR * inputs.currentOccupancy;
+  const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
+  const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
+  const effectiveCost = effectiveInputs.duettoAnnualCost || estimateDuettoCost(effectiveInputs.totalRooms);
+  const currentRevPAR = effectiveInputs.currentADR * effectiveInputs.currentOccupancy;
   const revPARLift = proj.newRevPAR - currentRevPAR;
   const revPARLiftPercent = currentRevPAR > 0 ? (revPARLift / currentRevPAR) * 100 : 0;
 
@@ -140,8 +142,9 @@ export function Tab2ROIProjection() {
             <AnimatedValue value={proj.totalAnnualImpact} currency={currency} />
           </div>
           <p className="text-white/40 text-sm font-sans">
-            {inputs.propertyName || "Your Property"} · {inputs.totalRooms} rooms ·{" "}
-            {formatPercent(inputs.currentOccupancy)} occupancy
+            {inputs.propertyName || (isPortfolioMode ? "Portfolio" : "Your Property")}
+            {isPortfolioMode ? ` · ${portfolioProperties.length} properties` : ""} · {effectiveInputs.totalRooms} rooms ·{" "}
+            {formatPercent(effectiveInputs.currentOccupancy)} {isPortfolioMode ? "blended " : ""}occupancy
           </p>
           <div className="flex justify-center gap-8 mt-6 pt-6 border-t border-white/10">
             <div className="text-center">
@@ -199,7 +202,7 @@ export function Tab2ROIProjection() {
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-4 p-3 rounded-xl bg-emerald-brand/8 border border-emerald-brand/20 flex items-center justify-between">
-            <span className="text-white/50 text-xs font-sans">RevPAR lift on {Math.round(inputs.yieldablePercent * 100)}% yieldable inventory</span>
+            <span className="text-white/50 text-xs font-sans">RevPAR lift on {Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory</span>
             <span className="text-emerald-brand font-semibold text-sm">+{revPARLiftPercent.toFixed(1)}%</span>
           </div>
         </div>
@@ -296,7 +299,7 @@ export function Tab2ROIProjection() {
           </div>
           <ExplanationCard
             title="Yieldable Scope"
-            body={`${Math.round(inputs.yieldablePercent * 100)}% of your room nights are in yieldable segments where Duetto's open pricing applies. The RevPAR lift is calculated on this optimizable inventory.`}
+            body={`${Math.round(effectiveInputs.yieldablePercent * 100)}% of ${isPortfolioMode ? "portfolio" : "your"} room nights are in yieldable segments where Duetto's open pricing applies. The RevPAR lift is calculated on this optimizable inventory.`}
             color="emerald"
           />
         </div>
@@ -310,7 +313,7 @@ export function Tab2ROIProjection() {
             {formatCurrency(proj.annualIncrementalRoomRevenue * (proj.incrementalADRRevenue / (proj.incrementalADRRevenue + proj.incrementalOccRevenue || 1)), currency, true)}
           </p>
           <p className="text-white/40 text-xs font-sans">
-            {formatCurrency(inputs.currentADR, currency)} → {formatCurrency(proj.newADR, currency)} ADR on yieldable segments
+            {formatCurrency(effectiveInputs.currentADR, currency)} → {formatCurrency(proj.newADR, currency)} {isPortfolioMode ? "blended " : ""}ADR on yieldable segments
           </p>
           <ExplanationCard
             title="Open Pricing"
@@ -328,7 +331,7 @@ export function Tab2ROIProjection() {
             {formatCurrency(proj.annualIncrementalRoomRevenue * (proj.incrementalOccRevenue / (proj.incrementalADRRevenue + proj.incrementalOccRevenue || 1)) + proj.groupRevenue, currency, true)}
           </p>
           <p className="text-white/40 text-xs font-sans">
-            {formatPercent(inputs.currentOccupancy)} → {formatPercent(proj.newOccupancy)} occupancy · Group: +{formatCurrency(proj.groupRevenue, currency, true)}
+            {formatPercent(effectiveInputs.currentOccupancy)} → {formatPercent(proj.newOccupancy)} {isPortfolioMode ? "blended " : ""}occupancy · Group: +{formatCurrency(proj.groupRevenue, currency, true)}
           </p>
           <ExplanationCard
             title="Demand Intelligence"
@@ -383,7 +386,7 @@ export function Tab2ROIProjection() {
                 {
                   label: "ADR Uplift",
                   fmt: (p: typeof projections.conservative) =>
-                    formatCurrency(p.newADR - inputs.currentADR, currency) + "/night",
+                    formatCurrency(p.newADR - effectiveInputs.currentADR, currency) + "/night",
                 },
                 {
                   label: "New Occupancy",

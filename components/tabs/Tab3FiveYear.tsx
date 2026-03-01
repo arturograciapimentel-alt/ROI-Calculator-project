@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, SliderInput } from "@/components/ui/InputField";
-import { formatCurrency, formatPercent, estimateDuettoCost } from "@/lib/calculations";
+import { formatCurrency, formatPercent, estimateDuettoCost, aggregatePortfolioInputs } from "@/lib/calculations";
 import { clsx } from "clsx";
 
 const YEAR_LABELS = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -26,9 +26,11 @@ function CalloutBadge({ label, value, sub }: { label: string; value: string; sub
 }
 
 export function Tab3FiveYear() {
-  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, capRate, setCapRate } = useCalculatorStore();
+  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, capRate, setCapRate, portfolioProperties } = useCalculatorStore();
   const currency = inputs.currency;
-  const effectiveCost = inputs.duettoAnnualCost || estimateDuettoCost(inputs.totalRooms);
+  const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
+  const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
+  const effectiveCost = effectiveInputs.duettoAnnualCost || estimateDuettoCost(effectiveInputs.totalRooms);
   const asmp = assumptions[scenario];
 
   const totalFiveYearImpact = yearlyProjections.reduce((sum, y) => sum + y.totalImpact, 0);
@@ -71,35 +73,31 @@ export function Tab3FiveYear() {
     };
   });
 
+  const baseAnnualRevenue = Math.round(effectiveInputs.currentADR * effectiveInputs.currentOccupancy * effectiveInputs.totalRooms * 365);
   const waterfall = [
-    {
-      name: "Current Annual\nRevenue",
-      base: 0,
-      value: Math.round(inputs.currentADR * inputs.currentOccupancy * inputs.totalRooms * 365),
-      type: "base",
-    },
+    { name: "Current Annual\nRevenue", base: 0, value: baseAnnualRevenue, type: "base" },
     {
       name: "ADR Uplift\n(Yr 5)",
-      base: Math.round(inputs.currentADR * inputs.currentOccupancy * inputs.totalRooms * 365),
+      base: baseAnnualRevenue,
       value: Math.round(year5Projection?.incrementalRevenue * 0.5 || 0),
       type: "positive",
     },
     {
       name: "Occ. Uplift\n(Yr 5)",
-      base: Math.round(inputs.currentADR * inputs.currentOccupancy * inputs.totalRooms * 365 + (year5Projection?.incrementalRevenue || 0) * 0.5),
+      base: baseAnnualRevenue + Math.round((year5Projection?.incrementalRevenue || 0) * 0.5),
       value: Math.round((year5Projection?.incrementalRevenue || 0) * 0.35),
       type: "positive",
     },
     {
       name: "Group\nOptimization",
-      base: Math.round(inputs.currentADR * inputs.currentOccupancy * inputs.totalRooms * 365 + (year5Projection?.incrementalRevenue || 0) * 0.85),
+      base: baseAnnualRevenue + Math.round((year5Projection?.incrementalRevenue || 0) * 0.85),
       value: Math.round((year5Projection?.incrementalRevenue || 0) * 0.15 + (year5Projection?.costSavings || 0)),
       type: "positive",
     },
     {
       name: "Projected Yr 5\nTotal Revenue",
       base: 0,
-      value: Math.round(inputs.currentADR * inputs.currentOccupancy * inputs.totalRooms * 365 + (year5Projection?.totalImpact || 0)),
+      value: baseAnnualRevenue + Math.round(year5Projection?.totalImpact || 0),
       type: "total",
     },
   ];
@@ -367,12 +365,12 @@ export function Tab3FiveYear() {
       <div className="grid grid-cols-3 gap-4">
         {[
           {
-            text: `In 5 years, Duetto is projected to generate ${formatCurrency(totalFiveYearNet, currency, true)} in net incremental value for ${inputs.propertyName || "your property"} — driven by sustained RevPAR improvement on ${Math.round(inputs.yieldablePercent * 100)}% yieldable inventory.`,
+            text: `In 5 years, Duetto is projected to generate ${formatCurrency(totalFiveYearNet, currency, true)} in net incremental value for ${inputs.propertyName || (isPortfolioMode ? "your portfolio" : "your property")} — driven by sustained RevPAR improvement on ${Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory${isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""}.`,
             color: "border-gold-500/30 bg-gold-500/5",
             textColor: "text-gold-400",
           },
           {
-            text: `For every $1 invested in Duetto, ${inputs.propertyName || "your property"} receives ${fiveYearROIMultiple.toFixed(1)}x back over 5 years through compounding RevPAR growth and group rate optimization.`,
+            text: `For every $1 invested in Duetto, ${inputs.propertyName || (isPortfolioMode ? "the portfolio" : "your property")} receives ${fiveYearROIMultiple.toFixed(1)}x back over 5 years through compounding RevPAR growth and group rate optimization.`,
             color: "border-emerald-brand/30 bg-emerald-brand/5",
             textColor: "text-emerald-brand",
           },
