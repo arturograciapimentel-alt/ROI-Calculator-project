@@ -178,24 +178,24 @@ export function Tab3FiveYear() {
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#D4A853" stopOpacity={0.5} />
-                <stop offset="95%" stopColor="#D4A853" stopOpacity={0.05} />
+                <stop offset="5%" stopColor="#C4FF45" stopOpacity={0.5} />
+                <stop offset="95%" stopColor="#C4FF45" stopOpacity={0.05} />
               </linearGradient>
               <linearGradient id="savGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00C389" stopOpacity={0.5} />
-                <stop offset="95%" stopColor="#00C389" stopOpacity={0.05} />
+                <stop offset="5%" stopColor="#68FFF2" stopOpacity={0.5} />
+                <stop offset="95%" stopColor="#68FFF2" stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v, currency, true)} />
             <Tooltip
-              contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(212,168,83,0.3)", borderRadius: 8, color: "white" }}
+              contentStyle={{ background: "rgba(14,33,36,0.98)", border: "1px solid rgba(196,255,69,0.3)", borderRadius: 8, color: "white" }}
               formatter={(v: number, name: string) => [formatCurrency(v, currency), name === "revenue" ? "Incremental Revenue" : "Cost Savings"]}
             />
             <Legend wrapperStyle={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }} />
-            <Area type="monotone" dataKey="revenue" stackId="1" stroke="#D4A853" fill="url(#revGrad)" name="revenue" />
-            <Area type="monotone" dataKey="savings" stackId="1" stroke="#00C389" fill="url(#savGrad)" name="savings" />
+            <Area type="monotone" dataKey="revenue" stackId="1" stroke="#C4FF45" fill="url(#revGrad)" name="revenue" />
+            <Area type="monotone" dataKey="savings" stackId="1" stroke="#68FFF2" fill="url(#savGrad)" name="savings" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -212,13 +212,13 @@ export function Tab3FiveYear() {
             <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v, currency, true)} />
             <Tooltip
-              contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(212,168,83,0.3)", borderRadius: 8, color: "white" }}
+              contentStyle={{ background: "rgba(14,33,36,0.98)", border: "1px solid rgba(196,255,69,0.3)", borderRadius: 8, color: "white" }}
               formatter={(v: number, name: string) => [formatCurrency(v, currency), name === "benefit" ? "Cumulative Benefit" : name === "cost" ? "Cumulative Investment" : "Net Position"]}
             />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4" />
-            <Area type="monotone" dataKey="benefit" fill="rgba(212,168,83,0.1)" stroke="#D4A853" strokeWidth={2} name="benefit" />
-            <Line type="monotone" dataKey="cost" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="cost" />
-            <Area type="monotone" dataKey="net" fill="rgba(0,195,137,0.08)" stroke="#00C389" strokeWidth={2} name="net" />
+            <Area type="monotone" dataKey="benefit" fill="rgba(196,255,69,0.1)" stroke="#C4FF45" strokeWidth={2} name="benefit" />
+            <Line type="monotone" dataKey="cost" stroke="#FF5900" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="cost" />
+            <Area type="monotone" dataKey="net" fill="rgba(104,255,242,0.08)" stroke="#68FFF2" strokeWidth={2} name="net" />
           </ComposedChart>
         </ResponsiveContainer>
         <p className="text-center text-xs text-white/30 font-sans mt-2">
@@ -265,7 +265,7 @@ export function Tab3FiveYear() {
                   label: "Duetto Investment",
                   values: yearlyProjections.map((y) => -y.duettoInvestment),
                   total: -totalFiveYearInvestment,
-                  color: "text-red-400",
+                  color: "text-[#FF5900]",
                 },
                 {
                   label: "Net Benefit",
@@ -278,7 +278,7 @@ export function Tab3FiveYear() {
                   label: "Cumulative Net",
                   values: yearlyProjections.map((y) => y.cumulativeNetBenefit),
                   total: yearlyProjections[4]?.cumulativeNetBenefit || 0,
-                  color: "text-blue-400",
+                  color: "text-[#7459EE]",
                   bold: true,
                 },
                 {
@@ -287,7 +287,7 @@ export function Tab3FiveYear() {
                   roiValues: yearlyProjections.map((y) => y.roiPercent),
                   total: null,
                   fiveYearROI: ((totalFiveYearImpact / totalFiveYearInvestment - 1) * 100),
-                  color: "text-purple-400",
+                  color: "text-[#7459EE]",
                 },
               ].map(({ label, values, total, color, bold, roiValues, fiveYearROI }) => (
                 <tr key={label} className={clsx("hover:bg-white/2 transition-colors", bold && "bg-white/2")}>
@@ -376,8 +376,8 @@ export function Tab3FiveYear() {
           },
           {
             text: `The implied property valuation increase from Duetto's RevPAR impact is ${formatCurrency(valuationImpact, currency, true)} at a ${formatPercent(capRate)} cap rate.`,
-            color: "border-purple-500/30 bg-purple-500/5",
-            textColor: "text-purple-400",
+            color: "border-[#7459EE]/30 bg-[#7459EE]/5",
+            textColor: "text-[#7459EE]",
           },
         ].map((card, i) => (
           <div key={i} className={clsx("rounded-2xl p-5 border", card.color)}>

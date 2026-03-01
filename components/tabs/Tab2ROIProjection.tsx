@@ -11,9 +11,9 @@ import type { Scenario, ScenarioAssumptions } from "@/lib/types";
 import { clsx } from "clsx";
 
 const SCENARIO_COLORS: Record<Scenario, string> = {
-  conservative: "#60a5fa",
-  moderate: "#00C389",
-  aggressive: "#D4A853",
+  conservative: "#7459EE",
+  moderate: "#68FFF2",
+  aggressive: "#C4FF45",
 };
 
 const SCENARIO_LABELS: Record<Scenario, string> = {
@@ -50,12 +50,12 @@ function ExplanationCard({ title, body, color = "gold" }: ExplanationCardProps) 
   const colors = {
     gold: "border-gold-500/30 bg-gold-500/5",
     emerald: "border-emerald-brand/30 bg-emerald-brand/5",
-    blue: "border-blue-400/30 bg-blue-400/5",
+    blue: "border-[#7459EE]/30 bg-[#7459EE]/5",
   };
   const textColors = {
     gold: "text-gold-400",
     emerald: "text-emerald-brand",
-    blue: "text-blue-400",
+    blue: "text-[#7459EE]",
   };
   return (
     <div className={clsx("rounded-xl p-4 border", colors[color])}>
@@ -80,18 +80,18 @@ export function Tab2ROIProjection() {
 
   // RevPAR is the primary chart — current vs projected
   const revPARChartData = [
-    { name: "Current RevPAR", value: parseFloat(currentRevPAR.toFixed(2)), fill: "#60a5fa" },
-    { name: "Projected RevPAR", value: parseFloat(proj.newRevPAR.toFixed(2)), fill: "#00C389" },
+    { name: "Current RevPAR", value: parseFloat(currentRevPAR.toFixed(2)), fill: "#7459EE" },
+    { name: "Projected RevPAR", value: parseFloat(proj.newRevPAR.toFixed(2)), fill: "#68FFF2" },
   ];
 
   // ADR contribution to RevPAR uplift vs Occupancy contribution
   const adrContribution = proj.incrementalADRRevenue;
   const occContribution = proj.incrementalOccRevenue;
   const revPARBreakdownData = [
-    { name: "ADR Impact", value: adrContribution, fill: "#D4A853" },
-    { name: "Occ. Impact", value: occContribution, fill: "#00C389" },
-    { name: "Group Rev.", value: proj.groupRevenue, fill: "#818cf8" },
-    { name: "Labor Savings", value: proj.laborSavings, fill: "#e879f9" },
+    { name: "ADR Impact", value: adrContribution, fill: "#C4FF45" },
+    { name: "Occ. Impact", value: occContribution, fill: "#68FFF2" },
+    { name: "Group Rev.", value: proj.groupRevenue, fill: "#7459EE" },
+    { name: "Labor Savings", value: proj.laborSavings, fill: "#FFD9A0" },
   ].filter((d) => d.value > 0);
 
   const asmp = assumptions[scenario];
@@ -169,7 +169,7 @@ export function Tab2ROIProjection() {
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
-              <p className="text-3xl font-serif font-bold text-blue-400">
+              <p className="text-3xl font-serif font-bold text-[#7459EE]">
                 {proj.roiMultiple.toFixed(1)}x
               </p>
               <p className="text-white/40 text-xs font-sans mt-1">ROI Multiple</p>
@@ -191,7 +191,7 @@ export function Tab2ROIProjection() {
               <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
               <Tooltip
-                contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(0,195,137,0.3)", borderRadius: 8, color: "white" }}
+                contentStyle={{ background: "rgba(14,33,36,0.98)", border: "1px solid rgba(104,255,242,0.3)", borderRadius: 8, color: "white" }}
                 formatter={(v: number) => [formatCurrency(v, currency), ""]}
               />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -216,7 +216,7 @@ export function Tab2ROIProjection() {
               <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v, currency, true)} />
               <YAxis type="category" dataKey="name" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
               <Tooltip
-                contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(212,168,83,0.3)", borderRadius: 8, color: "white" }}
+                contentStyle={{ background: "rgba(14,33,36,0.98)", border: "1px solid rgba(196,255,69,0.3)", borderRadius: 8, color: "white" }}
                 formatter={(v: number) => [formatCurrency(v, currency), "Annual Value"]}
               />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -324,10 +324,10 @@ export function Tab2ROIProjection() {
 
         <div className="glass-card rounded-2xl p-5 border border-white/8 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-400" />
+            <div className="w-2 h-2 rounded-full bg-[#7459EE]" />
             <p className="text-white/60 text-xs font-sans uppercase tracking-wider">Occupancy Uplift</p>
           </div>
-          <p className="text-2xl font-serif font-bold text-blue-400">
+          <p className="text-2xl font-serif font-bold text-[#7459EE]">
             {formatCurrency(proj.annualIncrementalRoomRevenue * (proj.incrementalOccRevenue / (proj.incrementalADRRevenue + proj.incrementalOccRevenue || 1)) + proj.groupRevenue, currency, true)}
           </p>
           <p className="text-white/40 text-xs font-sans">

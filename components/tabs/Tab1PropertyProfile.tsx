@@ -70,7 +70,7 @@ function PortfolioPropertyCard({
         </div>
         <button
           onClick={onRemove}
-          className="text-white/25 hover:text-red-400 transition-colors p-1 rounded"
+          className="text-white/25 hover:text-[#FF5900] transition-colors p-1 rounded"
           aria-label="Remove property"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

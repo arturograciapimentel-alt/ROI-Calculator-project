@@ -12,7 +12,7 @@ import {
 } from "@/lib/calculations";
 import { clsx } from "clsx";
 
-const PIE_COLORS = ["#D4A853", "#00C389", "#818cf8", "#fb923c"];
+const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
 export function Tab5Executive() {
   const {
@@ -62,7 +62,7 @@ export function Tab5Executive() {
       const canvas = await html2canvas(printRef.current, {
         scale: 2,
         useCORS: true,
-        backgroundColor: "#0A1628",
+        backgroundColor: "#0E2124",
         logging: false,
       });
 
@@ -346,7 +346,7 @@ export function Tab5Executive() {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ background: "rgba(10,22,40,0.98)", border: "1px solid rgba(212,168,83,0.3)", borderRadius: 8, color: "white", fontSize: 11 }}
+                      contentStyle={{ background: "rgba(14,33,36,0.98)", border: "1px solid rgba(196,255,69,0.3)", borderRadius: 8, color: "white", fontSize: 11 }}
                       formatter={(v: number) => [formatCurrency(v, currency, true), ""]}
                     />
                   </PieChart>
@@ -399,9 +399,9 @@ export function Tab5Executive() {
                   <p className="text-white/40 text-xs font-sans mb-1">5-Year Net Benefit</p>
                   <p className="text-emerald-brand font-serif font-bold text-xl">{formatCurrency(totalFiveYearNet, currency, true)}</p>
                 </div>
-                <div className="rounded-xl p-4 bg-purple-500/8 border border-purple-500/20 text-center">
+                <div className="rounded-xl p-4 bg-[#7459EE]/8 border border-[#7459EE]/20 text-center">
                   <p className="text-white/40 text-xs font-sans mb-1">Property Valuation +</p>
-                  <p className="text-purple-400 font-serif font-bold text-xl">{formatCurrency(valuationImpact, currency, true)}</p>
+                  <p className="text-[#7459EE] font-serif font-bold text-xl">{formatCurrency(valuationImpact, currency, true)}</p>
                 </div>
               </div>
             </div>

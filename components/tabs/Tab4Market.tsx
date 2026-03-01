@@ -116,7 +116,7 @@ function HistoricalCharts({ benchmark, currency }: { benchmark: CoStarBenchmark;
       isForecast: r.isForecast,
     }));
   if (data.length === 0) return null;
-  const tooltipStyle = { background: "#0f1629", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 };
+  const tooltipStyle = { background: "#0E2124", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 };
   return (
     <div className="mt-5 pt-5 border-t border-white/8">
       <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-4">
@@ -138,7 +138,7 @@ function HistoricalCharts({ benchmark, currency }: { benchmark: CoStarBenchmark;
                   return `${l}${r?.isForecast ? " (Forecast)" : ""}`;
                 }}
               />
-              <Line type="monotone" dataKey="RevPAR" stroke="#D4A853" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="RevPAR" stroke="#C4FF45" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -150,7 +150,7 @@ function HistoricalCharts({ benchmark, currency }: { benchmark: CoStarBenchmark;
               <XAxis dataKey="year" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} />
               <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} tickFormatter={(v) => `${v}%`} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}%`, "Occupancy"]} />
-              <Line type="monotone" dataKey="Occupancy" stroke="#00C389" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="Occupancy" stroke="#68FFF2" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -213,7 +213,7 @@ function UploadZone({
           </div>
         )}
       </div>
-      {error && <p className="mt-2 text-red-400 text-xs font-sans">{error}</p>}
+      {error && <p className="mt-2 text-[#FF5900] text-xs font-sans">{error}</p>}
     </div>
   );
 }
@@ -252,7 +252,7 @@ function MarketRow({
       </div>
       <button
         onClick={onRemove}
-        className="text-white/25 hover:text-red-400 transition-colors p-1 rounded flex-shrink-0"
+        className="text-white/25 hover:text-[#FF5900] transition-colors p-1 rounded flex-shrink-0"
         aria-label="Remove market"
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,7 +328,7 @@ function MarketDetailCard({
                   <span className="text-white/70">{formatCurrency(revpar, currency)} RevPAR</span>
                   <span className="text-white/20">vs.</span>
                   <span className="text-white/40">{formatCurrency(benchRevpar, currency)} market</span>
-                  <span className={clsx("font-semibold ml-auto", delta >= 0 ? "text-emerald-brand" : "text-red-400")}>
+                  <span className={clsx("font-semibold ml-auto", delta >= 0 ? "text-emerald-brand" : "text-[#FF5900]")}>
                     {delta >= 0 ? "+" : ""}{delta.toFixed(1)}%
                   </span>
                 </div>
@@ -589,7 +589,7 @@ export function Tab4Market() {
                       <p className="text-white/30 text-xs font-sans">{benchmarkSource === "costar" ? "CoStar Market" : "Market Avg"}</p>
                     </div>
                   </div>
-                  <div className={clsx("mt-3 text-sm font-semibold font-sans", delta >= 0 ? "text-emerald-brand" : "text-red-400")}>
+                  <div className={clsx("mt-3 text-sm font-semibold font-sans", delta >= 0 ? "text-emerald-brand" : "text-[#FF5900]")}>
                     {delta >= 0 ? "+" : ""}{delta.toFixed(1)}% vs. market
                   </div>
                 </div>
@@ -604,14 +604,14 @@ export function Tab4Market() {
                   <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
                     <PolarGrid stroke="rgba(255,255,255,0.1)" />
                     <PolarAngleAxis dataKey="metric" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} />
-                    <Radar name={isPortfolioMode ? "Portfolio" : "Your Property"} dataKey="current" stroke="#D4A853" fill="#D4A853" fillOpacity={0.2} />
-                    <Radar name="Market Avg" dataKey="market" stroke="#00C389" fill="#00C389" fillOpacity={0.1} strokeDasharray="4 4" />
+                    <Radar name={isPortfolioMode ? "Portfolio" : "Your Property"} dataKey="current" stroke="#C4FF45" fill="#C4FF45" fillOpacity={0.2} />
+                    <Radar name="Market Avg" dataKey="market" stroke="#68FFF2" fill="#68FFF2" fillOpacity={0.1} strokeDasharray="4 4" />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
               <div className="space-y-3">
-                <div className={clsx("p-4 rounded-xl border", revParVsBenchmark >= 0 ? "border-emerald-brand/20 bg-emerald-brand/5" : "border-red-400/20 bg-red-400/5")}>
-                  <p className={clsx("text-xs font-sans font-semibold uppercase tracking-wider mb-1", revParVsBenchmark >= 0 ? "text-emerald-brand" : "text-red-400")}>
+                <div className={clsx("p-4 rounded-xl border", revParVsBenchmark >= 0 ? "border-emerald-brand/20 bg-emerald-brand/5" : "border-[#FF5900]/20 bg-[#FF5900]/5")}>
+                  <p className={clsx("text-xs font-sans font-semibold uppercase tracking-wider mb-1", revParVsBenchmark >= 0 ? "text-emerald-brand" : "text-[#FF5900]")}>
                     {revParVsBenchmark >= 0 ? "Market Outperformer" : "Below Market Average"}
                   </p>
                   <p className="text-white/60 text-xs font-sans leading-relaxed">
@@ -678,17 +678,17 @@ export function Tab4Market() {
       </div>
 
       {/* ── Cost of Inaction ─────────────────────────────────────────────── */}
-      <div className="glass-card rounded-2xl p-6 border border-red-400/20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent" />
+      <div className="glass-card rounded-2xl p-6 border border-[#FF5900]/20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#FF5900]/5 to-transparent" />
         <div className="relative z-10">
           <h3 className="text-white font-serif font-semibold mb-1">Cost of Inaction Calculator</h3>
           <p className="text-white/40 text-xs font-sans mb-5">
             Every month without Duetto is measurable, unrealized revenue
           </p>
           <div className="grid grid-cols-3 gap-6">
-            <div className="text-center p-5 rounded-xl bg-red-500/8 border border-red-400/20">
-              <p className="text-red-400 text-xs font-sans uppercase tracking-wider mb-2">Monthly Opportunity Cost</p>
-              <p className="text-3xl font-serif font-bold text-red-400">
+            <div className="text-center p-5 rounded-xl bg-[#FF5900]/8 border border-[#FF5900]/20">
+              <p className="text-[#FF5900] text-xs font-sans uppercase tracking-wider mb-2">Monthly Opportunity Cost</p>
+              <p className="text-3xl font-serif font-bold text-[#FF5900]">
                 <RunningCounter target={monthlyOpportunityCost} currency={currency} />
               </p>
               <p className="text-white/30 text-xs font-sans mt-1">Unrealized revenue/month</p>
@@ -705,7 +705,7 @@ export function Tab4Market() {
                     className={clsx(
                       "px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-all",
                       delayMonths === m
-                        ? "bg-red-500/20 border border-red-400/40 text-red-400"
+                        ? "bg-[#FF5900]/20 border border-[#FF5900]/40 text-[#FF5900]"
                         : "bg-white/5 border border-white/10 text-white/40 hover:text-white/70"
                     )}
                   >
@@ -713,7 +713,7 @@ export function Tab4Market() {
                   </button>
                 ))}
               </div>
-              <div className="text-4xl font-serif font-bold text-red-400">
+              <div className="text-4xl font-serif font-bold text-[#FF5900]">
                 {formatCurrency(monthlyOpportunityCost * delayMonths, currency, true)}
               </div>
               <p className="text-white/30 text-xs font-sans mt-1">

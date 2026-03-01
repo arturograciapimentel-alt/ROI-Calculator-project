@@ -127,7 +127,7 @@ export function SliderInput({
           onChange={(e) => onChange(Number(e.target.value))}
           className="w-full cursor-pointer"
           style={{
-            background: `linear-gradient(to right, #D4A853 0%, #D4A853 ${percent}%, rgba(255,255,255,0.1) ${percent}%, rgba(255,255,255,0.1) 100%)`,
+            background: `linear-gradient(to right, #C4FF45 0%, #C4FF45 ${percent}%, rgba(255,255,255,0.1) ${percent}%, rgba(255,255,255,0.1) 100%)`,
           }}
         />
       </div>

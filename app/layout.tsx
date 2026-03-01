@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased min-h-screen" style={{ background: "linear-gradient(135deg, #050D1A 0%, #0A1628 50%, #0F2040 100%)" }}>
+      <body className="antialiased min-h-screen" style={{ background: "linear-gradient(135deg, #091819 0%, #0E2124 50%, #162C30 100%)" }}>
         {children}
       </body>
     </html>
