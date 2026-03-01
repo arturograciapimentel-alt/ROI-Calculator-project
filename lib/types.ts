@@ -1,3 +1,17 @@
+// Individual property entry in a portfolio
+export interface PortfolioProperty {
+  id: string;
+  propertyName: string;
+  propertyType: PropertyType;
+  totalRooms: number;
+  currentADR: number;
+  currentOccupancy: number; // 0-1
+  groupBusinessPercent: number; // 0-1
+  yieldablePercent: number; // 0-1
+  annualRMLaborCost: number;
+  duettoAnnualCost: number; // 0 = auto-estimate
+}
+
 // CoStar hotel class — aligns directly with CoStar Hospitality Market Report segments
 export type PropertyType =
   | "luxury-upper-upscale"
@@ -130,6 +144,7 @@ export interface CoStarBenchmark {
 export interface CalculatorState {
   activeTab: number;
   inputs: PropertyInputs;
+  portfolioProperties: PortfolioProperty[];
   scenario: Scenario;
   assumptions: {
     conservative: ScenarioAssumptions;

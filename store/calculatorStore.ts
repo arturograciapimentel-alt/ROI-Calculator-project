@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import type {
   CalculatorState,
   CoStarBenchmark,
+  PortfolioProperty,
   PropertyInputs,
   Scenario,
   ScenarioAssumptions,
@@ -14,6 +15,8 @@ import {
   DEFAULT_ASSUMPTIONS,
   SAMPLE_PROPERTY,
   estimateDuettoCost,
+  aggregatePortfolioInputs,
+  createPortfolioProperty,
 } from "@/lib/calculations";
 
 type CalculatorStore = CalculatorState & {
@@ -32,6 +35,8 @@ type CalculatorStore = CalculatorState & {
   setPreparedBy: (name: string) => void;
   setNextSteps: (steps: string) => void;
   setCostarBenchmark: (data: CoStarBenchmark | null) => void;
+  setPortfolioProperties: (props: PortfolioProperty[]) => void;
+  updatePortfolioProperty: (id: string, updates: Partial<Omit<PortfolioProperty, "id">>) => void;
 };
 
 const DEFAULT_INPUTS: PropertyInputs = {
@@ -62,10 +67,16 @@ function recalculate(
   inputs: PropertyInputs,
   assumptions: CalculatorState["assumptions"],
   hourlyLaborRate: number,
-  capRate: number
+  capRate: number,
+  portfolioProperties: PortfolioProperty[] = []
 ) {
-  const duettoAnnualCost = inputs.duettoAnnualCost || estimateDuettoCost(inputs.totalRooms);
-  const effectiveInputs = { ...inputs, duettoAnnualCost };
+  // When portfolio mode is active, aggregate per-property data into blended inputs
+  const baseInputs = portfolioProperties.length >= 2
+    ? aggregatePortfolioInputs(inputs, portfolioProperties)
+    : inputs;
+
+  const duettoAnnualCost = baseInputs.duettoAnnualCost || estimateDuettoCost(baseInputs.totalRooms);
+  const effectiveInputs = { ...baseInputs, duettoAnnualCost };
 
   const projections = {
     conservative: calculateROI(effectiveInputs, assumptions.conservative, hourlyLaborRate),
@@ -87,6 +98,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
     (set, get) => ({
       activeTab: 0,
       inputs: DEFAULT_INPUTS,
+      portfolioProperties: [],
       scenario: "moderate",
       assumptions: {
         conservative: { ...DEFAULT_ASSUMPTIONS.conservative },
@@ -115,13 +127,38 @@ export const useCalculatorStore = create<CalculatorStore>()(
       updateInputs: (newInputs) => {
         const state = get();
         const inputs = { ...state.inputs, ...newInputs };
+
+        // When numberOfProperties changes, sync the portfolioProperties array
+        let portfolioProperties = state.portfolioProperties;
+        if (
+          newInputs.numberOfProperties !== undefined &&
+          newInputs.numberOfProperties !== state.inputs.numberOfProperties
+        ) {
+          const n = Math.max(1, newInputs.numberOfProperties);
+          if (n <= 1) {
+            portfolioProperties = [];
+          } else {
+            // Grow or shrink array to match n
+            const current = state.portfolioProperties;
+            if (current.length < n) {
+              const added = Array.from({ length: n - current.length }, (_, i) =>
+                createPortfolioProperty(inputs, current.length + i)
+              );
+              portfolioProperties = [...current, ...added];
+            } else {
+              portfolioProperties = current.slice(0, n);
+            }
+          }
+        }
+
         const { projections, yearlyProjections } = recalculate(
           inputs,
           state.assumptions,
           state.hourlyLaborRate,
-          state.capRate
+          state.capRate,
+          portfolioProperties
         );
-        set({ inputs, projections, yearlyProjections });
+        set({ inputs, portfolioProperties, projections, yearlyProjections });
       },
 
       setScenario: (scenario) => set({ scenario }),
@@ -139,7 +176,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.inputs,
           assumptions,
           state.hourlyLaborRate,
-          state.capRate
+          state.capRate,
+          state.portfolioProperties
         );
         set({ assumptions, projections, yearlyProjections });
       },
@@ -151,9 +189,10 @@ export const useCalculatorStore = create<CalculatorStore>()(
           inputs,
           state.assumptions,
           state.hourlyLaborRate,
-          state.capRate
+          state.capRate,
+          []
         );
-        set({ inputs, projections, yearlyProjections });
+        set({ inputs, portfolioProperties: [], projections, yearlyProjections });
       },
 
       resetInputs: () => {
@@ -162,9 +201,10 @@ export const useCalculatorStore = create<CalculatorStore>()(
           DEFAULT_INPUTS,
           state.assumptions,
           state.hourlyLaborRate,
-          state.capRate
+          state.capRate,
+          []
         );
-        set({ inputs: DEFAULT_INPUTS, projections, yearlyProjections });
+        set({ inputs: DEFAULT_INPUTS, portfolioProperties: [], projections, yearlyProjections });
       },
 
       setCapRate: (capRate) => {
@@ -174,7 +214,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.inputs,
           state.assumptions,
           state.hourlyLaborRate,
-          capRate
+          capRate,
+          state.portfolioProperties
         );
         set({ projections, yearlyProjections });
       },
@@ -185,9 +226,40 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.inputs,
           state.assumptions,
           hourlyLaborRate,
-          state.capRate
+          state.capRate,
+          state.portfolioProperties
         );
         set({ hourlyLaborRate, projections, yearlyProjections });
+      },
+
+      setPortfolioProperties: (portfolioProperties) => {
+        const state = get();
+        // Keep numberOfProperties in sync with the actual array length
+        const n = Math.max(1, portfolioProperties.length);
+        const inputs = { ...state.inputs, numberOfProperties: n };
+        const { projections, yearlyProjections } = recalculate(
+          inputs,
+          state.assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          portfolioProperties
+        );
+        set({ inputs, portfolioProperties, projections, yearlyProjections });
+      },
+
+      updatePortfolioProperty: (id, updates) => {
+        const state = get();
+        const portfolioProperties = state.portfolioProperties.map((p) =>
+          p.id === id ? { ...p, ...updates } : p
+        );
+        const { projections, yearlyProjections } = recalculate(
+          state.inputs,
+          state.assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          portfolioProperties
+        );
+        set({ portfolioProperties, projections, yearlyProjections });
       },
 
       setPreparedBy: (preparedBy) => set({ preparedBy }),
@@ -198,6 +270,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       name: "duetto-roi-calculator",
       partialize: (state) => ({
         inputs: state.inputs,
+        portfolioProperties: state.portfolioProperties,
         scenario: state.scenario,
         assumptions: state.assumptions,
         capRate: state.capRate,

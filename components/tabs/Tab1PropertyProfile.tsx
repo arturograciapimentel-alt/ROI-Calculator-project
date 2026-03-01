@@ -4,8 +4,8 @@ import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, TextInput, SelectInput, SliderInput, StarRating } from "@/components/ui/InputField";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, CURRENCY_SYMBOLS } from "@/lib/calculations";
-import type { PropertyInputs } from "@/lib/types";
+import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost } from "@/lib/calculations";
+import type { PortfolioProperty, PropertyInputs, PropertyType } from "@/lib/types";
 
 function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
   const fields = [
@@ -33,12 +33,187 @@ function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
   );
 }
 
-export function Tab1PropertyProfile() {
-  const { inputs, updateInputs, loadSampleData } = useCalculatorStore();
-  const sym = CURRENCY_SYMBOLS[inputs.currency] || "$";
+function PortfolioPropertyCard({
+  index,
+  property,
+  sym,
+  currency,
+  onUpdate,
+  onRemove,
+}: {
+  index: number;
+  property: PortfolioProperty;
+  sym: string;
+  currency: string;
+  onUpdate: (updates: Partial<Omit<PortfolioProperty, "id">>) => void;
+  onRemove: () => void;
+}) {
+  const autoEstimate = estimateDuettoCost(property.totalRooms);
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/3 p-5 space-y-5">
+      {/* Card header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-gold-500/20 text-gold-400 text-xs font-bold flex items-center justify-center font-sans">
+            {index + 1}
+          </span>
+          <span className="text-white/80 text-sm font-sans font-medium">
+            {property.propertyName || `Property ${index + 1}`}
+          </span>
+          <span className="text-white/30 text-xs font-sans">
+            · {property.totalRooms} rooms
+            · {formatCurrency(property.currentADR, currency)} ADR
+            · {Math.round(property.currentOccupancy * 100)}% occ
+          </span>
+        </div>
+        <button
+          onClick={onRemove}
+          className="text-white/25 hover:text-red-400 transition-colors p-1 rounded"
+          aria-label="Remove property"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
-  const currentRevPAR = inputs.currentADR * inputs.currentOccupancy;
-  const annualRevenue = currentRevPAR * inputs.totalRooms * 365;
+      {/* Identity row */}
+      <div className="grid grid-cols-3 gap-4">
+        <InputField label="Property Name">
+          <TextInput
+            value={property.propertyName}
+            onChange={(e) => onUpdate({ propertyName: e.target.value })}
+            placeholder={`Property ${index + 1}`}
+          />
+        </InputField>
+
+        <InputField label="Hotel Class (CoStar)">
+          <SelectInput
+            value={property.propertyType}
+            onChange={(e) => onUpdate({ propertyType: e.target.value as PropertyType })}
+          >
+            <option value="luxury-upper-upscale">Luxury &amp; Upper Upscale</option>
+            <option value="upscale-upper-midscale">Upscale &amp; Upper Midscale</option>
+            <option value="midscale-economy">Midscale &amp; Economy</option>
+          </SelectInput>
+        </InputField>
+
+        <InputField label="Total Rooms" required>
+          <TextInput
+            type="number"
+            value={property.totalRooms || ""}
+            onChange={(e) => onUpdate({ totalRooms: parseInt(e.target.value) || 0 })}
+            min="1"
+            max="5000"
+            placeholder="200"
+          />
+        </InputField>
+      </div>
+
+      {/* Performance row */}
+      <div className="grid grid-cols-3 gap-4">
+        <InputField label={`Average Daily Rate — ${sym}`} required>
+          <TextInput
+            type="number"
+            value={property.currentADR || ""}
+            onChange={(e) => onUpdate({ currentADR: parseFloat(e.target.value) || 0 })}
+            prefix={sym}
+            placeholder="150"
+          />
+        </InputField>
+
+        <InputField label="Annual RM Labor Cost">
+          <TextInput
+            type="number"
+            value={property.annualRMLaborCost || ""}
+            onChange={(e) => onUpdate({ annualRMLaborCost: parseFloat(e.target.value) || 0 })}
+            prefix={sym}
+            placeholder="80000"
+          />
+        </InputField>
+
+        <InputField
+          label="Duetto Annual Cost"
+          tooltip={`Leave 0 to auto-estimate (${formatCurrency(autoEstimate, currency)}/yr for ${property.totalRooms} rooms)`}
+        >
+          <TextInput
+            type="number"
+            value={property.duettoAnnualCost || ""}
+            onChange={(e) => onUpdate({ duettoAnnualCost: parseFloat(e.target.value) || 0 })}
+            prefix={sym}
+            placeholder={`${autoEstimate.toLocaleString()} (auto)`}
+          />
+        </InputField>
+      </div>
+
+      {/* Sliders row */}
+      <div className="grid grid-cols-3 gap-6">
+        <InputField label="Occupancy Rate">
+          <SliderInput
+            value={Math.round(property.currentOccupancy * 100)}
+            min={30}
+            max={99}
+            onChange={(v) => onUpdate({ currentOccupancy: v / 100 })}
+            formatValue={(v) => `${v}%`}
+          />
+        </InputField>
+
+        <InputField label="Group Business">
+          <SliderInput
+            value={Math.round(property.groupBusinessPercent * 100)}
+            min={0}
+            max={80}
+            onChange={(v) => onUpdate({ groupBusinessPercent: v / 100 })}
+            formatValue={(v) => `${v}%`}
+          />
+        </InputField>
+
+        <InputField label="Yieldable Mix">
+          <SliderInput
+            value={Math.round(property.yieldablePercent * 100)}
+            min={10}
+            max={100}
+            onChange={(v) => onUpdate({ yieldablePercent: v / 100 })}
+            formatValue={(v) => `${v}%`}
+          />
+        </InputField>
+      </div>
+    </div>
+  );
+}
+
+export function Tab1PropertyProfile() {
+  const {
+    inputs,
+    updateInputs,
+    loadSampleData,
+    portfolioProperties,
+    updatePortfolioProperty,
+    setPortfolioProperties,
+  } = useCalculatorStore();
+
+  const sym = CURRENCY_SYMBOLS[inputs.currency] || "$";
+  const isPortfolioMode = inputs.numberOfProperties > 1;
+
+  // Blended KPI values — from portfolio when active, else from single-property inputs
+  const kpiRooms = isPortfolioMode && portfolioProperties.length > 0
+    ? portfolioProperties.reduce((s, p) => s + p.totalRooms, 0)
+    : inputs.totalRooms;
+
+  const kpiADR = isPortfolioMode && portfolioProperties.length > 0 && kpiRooms > 0
+    ? portfolioProperties.reduce((s, p) => s + p.currentADR * p.totalRooms, 0) / kpiRooms
+    : inputs.currentADR;
+
+  const kpiOcc = isPortfolioMode && portfolioProperties.length > 0 && kpiRooms > 0
+    ? portfolioProperties.reduce((s, p) => s + p.currentOccupancy * p.totalRooms, 0) / kpiRooms
+    : inputs.currentOccupancy;
+
+  const kpiYieldable = isPortfolioMode && portfolioProperties.length > 0 && kpiRooms > 0
+    ? portfolioProperties.reduce((s, p) => s + p.yieldablePercent * p.totalRooms, 0) / kpiRooms
+    : inputs.yieldablePercent;
+
+  const kpiRevPAR = kpiADR * kpiOcc;
+  const kpiAnnualRevenue = kpiRevPAR * kpiRooms * 365;
 
   const update = useCallback(
     (key: keyof PropertyInputs, value: PropertyInputs[keyof PropertyInputs]) => {
@@ -47,14 +222,26 @@ export function Tab1PropertyProfile() {
     [updateInputs]
   );
 
+  const handleRemoveProperty = (id: string) => {
+    setPortfolioProperties(portfolioProperties.filter((p) => p.id !== id));
+  };
+
+  // Section numbers shift when portfolio mode is active
+  const perfSectionNum = isPortfolioMode ? 3 : 2;
+  const opsSectionNum = isPortfolioMode ? 4 : 3;
+
   return (
     <div className="space-y-8 tab-content-enter">
       {/* Header bar */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-serif font-bold text-white">Property Profile</h2>
+          <h2 className="text-2xl font-serif font-bold text-white">
+            {isPortfolioMode ? "Portfolio Profile" : "Property Profile"}
+          </h2>
           <p className="text-white/40 text-sm font-sans mt-1">
-            Enter your property data to generate a personalized ROI analysis
+            {isPortfolioMode
+              ? `${portfolioProperties.length} properties · enter per-property metrics below`
+              : "Enter your property data to generate a personalized ROI analysis"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -74,29 +261,29 @@ export function Tab1PropertyProfile() {
       {/* Live KPI bar */}
       <div className="grid grid-cols-4 gap-4">
         <MetricCard
-          label="Current RevPAR"
-          value={formatCurrency(currentRevPAR, inputs.currency)}
-          subtitle="ADR × Occupancy"
+          label={isPortfolioMode ? "Portfolio RevPAR" : "Current RevPAR"}
+          value={formatCurrency(kpiRevPAR, inputs.currency)}
+          subtitle={isPortfolioMode ? "Blended ADR × Occupancy" : "ADR × Occupancy"}
           variant="default"
           size="sm"
         />
         <MetricCard
           label="Annual Room Revenue"
-          value={formatCurrency(annualRevenue, inputs.currency, true)}
+          value={formatCurrency(kpiAnnualRevenue, inputs.currency, true)}
           subtitle="RevPAR × Rooms × 365"
           variant="default"
           size="sm"
         />
         <MetricCard
           label="Total Rooms"
-          value={inputs.totalRooms.toLocaleString()}
-          subtitle="Property inventory"
+          value={kpiRooms.toLocaleString()}
+          subtitle={isPortfolioMode ? `Across ${portfolioProperties.length} properties` : "Property inventory"}
           variant="default"
           size="sm"
         />
         <MetricCard
           label="Yieldable Mix"
-          value={`${Math.round(inputs.yieldablePercent * 100)}%`}
+          value={`${Math.round(kpiYieldable * 100)}%`}
           subtitle="RMS-optimizable room nights"
           variant="gold"
           size="sm"
@@ -111,11 +298,11 @@ export function Tab1PropertyProfile() {
           subtitle="Basic property information and market context"
         />
         <div className="grid grid-cols-2 gap-5">
-          <InputField label="Property Name" required tooltip="This will appear in PDF exports and reports">
+          <InputField label={isPortfolioMode ? "Portfolio / Company Name" : "Property Name"} required tooltip="This will appear in PDF exports and reports">
             <TextInput
               value={inputs.propertyName}
               onChange={(e) => update("propertyName", e.target.value)}
-              placeholder="e.g. The Grand Metropolitan Hotel"
+              placeholder={isPortfolioMode ? "e.g. Acme Hotel Group" : "e.g. The Grand Metropolitan Hotel"}
             />
           </InputField>
 
@@ -138,16 +325,18 @@ export function Tab1PropertyProfile() {
             />
           </InputField>
 
-          <InputField label="Total Rooms" required tooltip="Total number of sellable guest rooms/suites">
-            <TextInput
-              type="number"
-              value={inputs.totalRooms || ""}
-              onChange={(e) => update("totalRooms", parseInt(e.target.value) || 0)}
-              min="50"
-              max="5000"
-              placeholder="200"
-            />
-          </InputField>
+          {!isPortfolioMode && (
+            <InputField label="Total Rooms" required tooltip="Total number of sellable guest rooms/suites">
+              <TextInput
+                type="number"
+                value={inputs.totalRooms || ""}
+                onChange={(e) => update("totalRooms", parseInt(e.target.value) || 0)}
+                min="50"
+                max="5000"
+                placeholder="200"
+              />
+            </InputField>
+          )}
 
           <InputField label="Currency">
             <SelectInput
@@ -172,7 +361,7 @@ export function Tab1PropertyProfile() {
             <TextInput
               type="number"
               value={inputs.numberOfProperties || ""}
-              onChange={(e) => update("numberOfProperties", parseInt(e.target.value) || 0)}
+              onChange={(e) => update("numberOfProperties", parseInt(e.target.value) || 1)}
               min="1"
               max="100"
               placeholder="1"
@@ -181,82 +370,156 @@ export function Tab1PropertyProfile() {
         </div>
       </div>
 
-      {/* Section 2: Current Performance */}
-      <div className="glass-card rounded-2xl p-6 border border-white/8">
-        <SectionHeader
-          number={2}
-          title="Current Performance Metrics"
-          subtitle="Your property's current revenue management performance"
-        />
-        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-          <InputField
-            label={`Average Daily Rate (ADR) — ${sym}`}
-            required
-            tooltip="Your current blended ADR across all segments and room types"
-          >
-            <TextInput
-              type="number"
-              value={inputs.currentADR || ""}
-              onChange={(e) => update("currentADR", parseFloat(e.target.value) || 0)}
-              prefix={sym}
-              placeholder="150"
+      {/* Section 2: Portfolio Properties — shown only in portfolio mode */}
+      {isPortfolioMode && (
+        <div className="glass-card rounded-2xl p-6 border border-white/8">
+          <div className="flex items-start justify-between mb-6">
+            <SectionHeader
+              number={2}
+              title="Portfolio Properties"
+              subtitle="Enter revenue metrics for each property — ROI is calculated on the blended portfolio"
             />
-          </InputField>
+            <div className="flex items-center gap-2 text-xs text-white/40 font-sans mt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-brand/60" />
+              Portfolio mode active
+            </div>
+          </div>
 
-          <div>
+          <div className="space-y-4">
+            {portfolioProperties.map((prop, i) => (
+              <PortfolioPropertyCard
+                key={prop.id}
+                index={i}
+                property={prop}
+                sym={sym}
+                currency={inputs.currency}
+                onUpdate={(updates) => updatePortfolioProperty(prop.id, updates)}
+                onRemove={() => handleRemoveProperty(prop.id)}
+              />
+            ))}
+          </div>
+
+          {/* Portfolio blended summary */}
+          {portfolioProperties.length >= 2 && (
+            <div className="mt-6 pt-5 border-t border-white/8">
+              <p className="text-xs text-white/40 font-sans uppercase tracking-wider mb-3">
+                Blended Portfolio Summary
+              </p>
+              <div className="grid grid-cols-4 gap-4">
+                <MetricCard
+                  label="Total Rooms"
+                  value={kpiRooms.toLocaleString()}
+                  subtitle={`${portfolioProperties.length} properties`}
+                  variant="default"
+                  size="sm"
+                />
+                <MetricCard
+                  label="Blended ADR"
+                  value={formatCurrency(kpiADR, inputs.currency)}
+                  subtitle="Room-weighted average"
+                  variant="default"
+                  size="sm"
+                />
+                <MetricCard
+                  label="Blended Occupancy"
+                  value={`${Math.round(kpiOcc * 100)}%`}
+                  subtitle="Room-weighted average"
+                  variant="default"
+                  size="sm"
+                />
+                <MetricCard
+                  label="Portfolio RevPAR"
+                  value={formatCurrency(kpiRevPAR, inputs.currency)}
+                  subtitle="Blended ADR × Occ"
+                  variant="gold"
+                  size="sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Section 2 / 3: Current Performance — hidden in portfolio mode (captured per-property above) */}
+      {!isPortfolioMode && (
+        <div className="glass-card rounded-2xl p-6 border border-white/8">
+          <SectionHeader
+            number={perfSectionNum}
+            title="Current Performance Metrics"
+            subtitle="Your property's current revenue management performance"
+          />
+          <div className="grid grid-cols-2 gap-x-8 gap-y-6">
             <InputField
-              label="Current Occupancy Rate"
+              label={`Average Daily Rate (ADR) — ${sym}`}
               required
-              tooltip="Your trailing 12-month average occupancy"
+              tooltip="Your current blended ADR across all segments and room types"
             >
-              <SliderInput
-                value={Math.round(inputs.currentOccupancy * 100)}
-                min={30}
-                max={99}
-                onChange={(v) => update("currentOccupancy", v / 100)}
-                formatValue={(v) => `${v}%`}
+              <TextInput
+                type="number"
+                value={inputs.currentADR || ""}
+                onChange={(e) => update("currentADR", parseFloat(e.target.value) || 0)}
+                prefix={sym}
+                placeholder="150"
               />
             </InputField>
-          </div>
 
-          <div>
-            <InputField
-              label="Group Business (% of room nights)"
-              tooltip="Percentage of room nights occupied by group/contract business"
-            >
-              <SliderInput
-                value={Math.round(inputs.groupBusinessPercent * 100)}
-                min={0}
-                max={80}
-                onChange={(v) => update("groupBusinessPercent", v / 100)}
-                formatValue={(v) => `${v}%`}
-              />
-            </InputField>
-          </div>
+            <div>
+              <InputField
+                label="Current Occupancy Rate"
+                required
+                tooltip="Your trailing 12-month average occupancy"
+              >
+                <SliderInput
+                  value={Math.round(inputs.currentOccupancy * 100)}
+                  min={30}
+                  max={99}
+                  onChange={(v) => update("currentOccupancy", v / 100)}
+                  formatValue={(v) => `${v}%`}
+                />
+              </InputField>
+            </div>
 
-          <div>
-            <InputField
-              label="Yieldable Booking Mix (% of room nights)"
-              tooltip="Percentage of room nights in segments the RMS can optimize with dynamic pricing. Non-yieldable segments — such as group blocks and corporate contracted rates — operate at static negotiated rates."
-            >
-              <SliderInput
-                value={Math.round(inputs.yieldablePercent * 100)}
-                min={10}
-                max={100}
-                onChange={(v) => update("yieldablePercent", v / 100)}
-                formatValue={(v) => `${v}% yieldable · ${100 - v}% fixed/non-yieldable`}
-              />
-            </InputField>
+            <div>
+              <InputField
+                label="Group Business (% of room nights)"
+                tooltip="Percentage of room nights occupied by group/contract business"
+              >
+                <SliderInput
+                  value={Math.round(inputs.groupBusinessPercent * 100)}
+                  min={0}
+                  max={80}
+                  onChange={(v) => update("groupBusinessPercent", v / 100)}
+                  formatValue={(v) => `${v}%`}
+                />
+              </InputField>
+            </div>
+
+            <div>
+              <InputField
+                label="Yieldable Booking Mix (% of room nights)"
+                tooltip="Percentage of room nights in segments the RMS can optimize with dynamic pricing. Non-yieldable segments — such as group blocks and corporate contracted rates — operate at static negotiated rates."
+              >
+                <SliderInput
+                  value={Math.round(inputs.yieldablePercent * 100)}
+                  min={10}
+                  max={100}
+                  onChange={(v) => update("yieldablePercent", v / 100)}
+                  formatValue={(v) => `${v}% yieldable · ${100 - v}% fixed/non-yieldable`}
+                />
+              </InputField>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Section 3: Operational Context */}
+      {/* Section 3 / 4: Operational Context */}
       <div className="glass-card rounded-2xl p-6 border border-white/8">
         <SectionHeader
-          number={3}
+          number={opsSectionNum}
           title="Operational Context"
-          subtitle="Current revenue management approach and staffing"
+          subtitle={isPortfolioMode
+            ? "Portfolio-wide revenue management approach and staffing"
+            : "Current revenue management approach and staffing"}
         />
         <div className="grid grid-cols-2 gap-5">
           <InputField label="Current RM Approach">
@@ -283,14 +546,14 @@ export function Tab1PropertyProfile() {
 
           <InputField
             label="Revenue Management Staff"
-            tooltip="Total FTEs dedicated to revenue management"
+            tooltip={isPortfolioMode ? "Total FTEs across the portfolio" : "Total FTEs dedicated to revenue management"}
           >
             <TextInput
               type="number"
               value={inputs.rmStaffCount || ""}
               onChange={(e) => update("rmStaffCount", parseInt(e.target.value) || 0)}
               min="0"
-              max="20"
+              max="50"
               placeholder="2"
             />
           </InputField>
@@ -309,9 +572,23 @@ export function Tab1PropertyProfile() {
               />
             </InputField>
           </div>
+
+          {!isPortfolioMode && (
+            <InputField
+              label={`Annual RM Labor Cost — ${sym}`}
+              tooltip="Total annual salary + benefits for RM staff"
+            >
+              <TextInput
+                type="number"
+                value={inputs.annualRMLaborCost || ""}
+                onChange={(e) => update("annualRMLaborCost", parseFloat(e.target.value) || 0)}
+                prefix={sym}
+                placeholder="100000"
+              />
+            </InputField>
+          )}
         </div>
       </div>
-
     </div>
   );
 }

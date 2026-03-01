@@ -1,5 +1,6 @@
 import type {
   PropertyInputs,
+  PortfolioProperty,
   ScenarioAssumptions,
   ROIProjection,
   YearlyProjection,
@@ -261,3 +262,63 @@ export const RM_APPROACH_LABELS: Record<string, string> = {
   "competitor-rms": "Competitor RMS",
   none: "No Formal Process",
 };
+
+/**
+ * Aggregates an array of portfolio properties into a single blended PropertyInputs.
+ * ADR, occupancy, group%, and yieldable% are weighted by room count.
+ * Labor and Duetto costs are summed across properties.
+ * Non-revenue fields (currency, rmApproach, etc.) are inherited from baseInputs.
+ */
+export function aggregatePortfolioInputs(
+  baseInputs: PropertyInputs,
+  portfolioProperties: PortfolioProperty[]
+): PropertyInputs {
+  if (portfolioProperties.length === 0) return baseInputs;
+
+  const totalRooms = portfolioProperties.reduce((s, p) => s + (p.totalRooms || 0), 0);
+  if (totalRooms === 0) return baseInputs;
+
+  const weightedAvg = (field: keyof PortfolioProperty) =>
+    portfolioProperties.reduce((s, p) => s + (p[field] as number) * p.totalRooms, 0) / totalRooms;
+
+  const currentADR = weightedAvg("currentADR");
+  const currentOccupancy = weightedAvg("currentOccupancy");
+  const groupBusinessPercent = weightedAvg("groupBusinessPercent");
+  const yieldablePercent = weightedAvg("yieldablePercent");
+  const annualRMLaborCost = portfolioProperties.reduce((s, p) => s + (p.annualRMLaborCost || 0), 0);
+  const duettoAnnualCost = portfolioProperties.reduce(
+    (s, p) => s + (p.duettoAnnualCost > 0 ? p.duettoAnnualCost : estimateDuettoCost(p.totalRooms)),
+    0
+  );
+
+  return {
+    ...baseInputs,
+    totalRooms,
+    currentADR,
+    currentOccupancy,
+    groupBusinessPercent,
+    yieldablePercent,
+    annualRMLaborCost,
+    duettoAnnualCost,
+    numberOfProperties: portfolioProperties.length,
+  };
+}
+
+/** Creates a blank PortfolioProperty seeded from existing inputs */
+export function createPortfolioProperty(
+  inputs: PropertyInputs,
+  index: number
+): PortfolioProperty {
+  return {
+    id: `prop-${Date.now()}-${index}`,
+    propertyName: index === 0 ? inputs.propertyName || `Property ${index + 1}` : `Property ${index + 1}`,
+    propertyType: inputs.propertyType,
+    totalRooms: inputs.totalRooms,
+    currentADR: inputs.currentADR,
+    currentOccupancy: inputs.currentOccupancy,
+    groupBusinessPercent: inputs.groupBusinessPercent,
+    yieldablePercent: inputs.yieldablePercent,
+    annualRMLaborCost: inputs.annualRMLaborCost,
+    duettoAnnualCost: inputs.duettoAnnualCost,
+  };
+}
