@@ -60,9 +60,24 @@ export function Tab5Executive() {
 
       if (!printRef.current) return;
 
+      // Preload images to ensure they're available for html2canvas
+      await Promise.all([
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = img.onerror = resolve;
+          img.src = "/duetto-icon.png";
+        }),
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = img.onerror = resolve;
+          img.src = "/duetto-wordmark.png";
+        }),
+      ]);
+
       const canvas = await html2canvas(printRef.current, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: "#0E2124",
         logging: false,
       });
