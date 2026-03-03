@@ -234,22 +234,20 @@ export function Tab2ROIProjection() {
         <p className="text-white/40 text-xs font-sans mb-6">
           Set the expected RevPAR uplift for this scenario. The model decomposes it: 60% attributed to ADR improvement (open pricing), 40% to occupancy (demand intelligence).
         </p>
-        <div className="max-w-md">
-          <InputField
-            label="RevPAR Uplift"
-            tooltip="Total RevPAR improvement from Duetto vs. current performance. Applied to yieldable inventory only. Decomposed internally: 60% from ADR (open pricing), 40% from occupancy (demand forecasting)."
-          >
-            <SliderInput
-              value={Math.round(asmp.revparUpliftPercent * 10) / 0.1}
-              min={1}
-              max={15}
-              step={0.5}
-              onChange={(v) => updateAssumption(scenario, "revparUpliftPercent", v / 100)}
-              formatValue={(v) => `+${v}%`}
-            />
-          </InputField>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 max-w-md">
+        <InputField
+          label="RevPAR Uplift"
+          tooltip="Total RevPAR improvement from Duetto vs. current performance. Applied to yieldable inventory only. Decomposed internally: 60% from ADR (open pricing), 40% from occupancy (demand forecasting)."
+        >
+          <SliderInput
+            value={Math.round(asmp.revparUpliftPercent * 100)}
+            min={1}
+            max={50}
+            step={1}
+            onChange={(v) => updateAssumption(scenario, "revparUpliftPercent", v / 100)}
+            formatValue={(v) => `+${v}%`}
+          />
+        </InputField>
+        <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="p-3 rounded-lg bg-gold-500/8 border border-gold-500/20 text-center">
             <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider">ADR component</p>
             <p className="text-gold-400 font-semibold text-sm mt-0.5">
