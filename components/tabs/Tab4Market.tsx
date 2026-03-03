@@ -526,24 +526,30 @@ function AggregateCard({
   hotels: DuettoMarketHotel[];
   currency: string;
 }) {
-  // Weighted aggregation
+  // Room nights — direct sum of occupied nights
   const totalCurrentRN  = hotels.reduce((s, h) => s + h.currentRoomNights,  0);
   const totalPriorRN    = hotels.reduce((s, h) => s + h.priorRoomNights,    0);
+  // Room revenue — direct sum
   const totalCurrentRev = hotels.reduce((s, h) => s + h.currentRoomRevenue, 0);
   const totalPriorRev   = hotels.reduce((s, h) => s + h.priorRoomRevenue,   0);
 
-  // Available room nights = Revenue / RevPAR (per hotel, then summed)
-  const totalCurrentAvailRN = hotels.reduce(
-    (s, h) => s + (h.currentRevPAR > 0 ? h.currentRoomRevenue / h.currentRevPAR : 0), 0
-  );
-  const totalPriorAvailRN = hotels.reduce(
-    (s, h) => s + (h.priorRevPAR > 0 ? h.priorRoomRevenue / h.priorRevPAR : 0), 0
-  );
+  // Weighted ADR: Σ(enteredADR × RoomNights) / Σ(RoomNights)
+  // Using entered ADR values directly ensures consistency with individual hotel YoY displays.
+  const currentADR = totalCurrentRN > 0
+    ? hotels.reduce((s, h) => s + h.currentADR * h.currentRoomNights, 0) / totalCurrentRN
+    : 0;
+  const priorADR = totalPriorRN > 0
+    ? hotels.reduce((s, h) => s + h.priorADR * h.priorRoomNights, 0) / totalPriorRN
+    : 0;
 
-  const currentADR    = totalCurrentRN    > 0 ? totalCurrentRev / totalCurrentRN    : 0;
-  const priorADR      = totalPriorRN      > 0 ? totalPriorRev   / totalPriorRN      : 0;
-  const currentRevPAR = totalCurrentAvailRN > 0 ? totalCurrentRev / totalCurrentAvailRN : 0;
-  const priorRevPAR   = totalPriorAvailRN   > 0 ? totalPriorRev   / totalPriorAvailRN   : 0;
+  // Weighted RevPAR: Σ(enteredRevPAR × RoomNights) / Σ(RoomNights)
+  // Same weighting basis as ADR so the % changes are directionally consistent.
+  const currentRevPAR = totalCurrentRN > 0
+    ? hotels.reduce((s, h) => s + h.currentRevPAR * h.currentRoomNights, 0) / totalCurrentRN
+    : 0;
+  const priorRevPAR = totalPriorRN > 0
+    ? hotels.reduce((s, h) => s + h.priorRevPAR * h.priorRoomNights, 0) / totalPriorRN
+    : 0;
 
   const metrics = [
     {

@@ -64,16 +64,13 @@ export interface PropertyInputs {
   implementationFee: number;    // One-time fee charged in Year 1 only
   ohipConnectivityFee: number;  // Annual OHIP fee (Opera Cloud only, recurring)
   initialContractYears: number; // Length of initial contract term (1-5)
-  // Derived — computed from breakdown above before passing to calculations
+  /** Derived — computed from breakdown above before passing to calculations */
   duettoAnnualCost: number;
 }
 
 export interface ScenarioAssumptions {
-  adrUpliftPercent: number;
-  occupancyUpliftPoints: number;
-  groupPricingImprovementPercent: number;
-  channelShiftPercent: number;
-  laborHoursSavedPerWeek: number;
+  /** Primary RevPAR uplift driver. Decomposed internally: 60% ADR / 40% occupancy. */
+  revparUpliftPercent: number;
   marketGrowthRate: number;
 }
 

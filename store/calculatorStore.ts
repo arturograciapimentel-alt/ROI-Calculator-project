@@ -16,7 +16,6 @@ import {
   calculateYearlyProjections,
   DEFAULT_ASSUMPTIONS,
   SAMPLE_PROPERTY,
-  estimateDuettoCost,
   computeDuettoAnnualCost,
   aggregatePortfolioInputs,
   createPortfolioProperty,

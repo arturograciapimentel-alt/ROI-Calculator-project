@@ -60,30 +60,21 @@ export function formatNumber(value: number): string {
 // Default assumptions by scenario
 export const DEFAULT_ASSUMPTIONS = {
   conservative: {
-    adrUpliftPercent: 0.03,
-    occupancyUpliftPoints: 0.01,
-    groupPricingImprovementPercent: 0.02,
-    channelShiftPercent: 0, // removed OTA channel shift focus
-    laborHoursSavedPerWeek: 0,
+    revparUpliftPercent: 0.03, // 3% RevPAR uplift
     marketGrowthRate: 0.02,
   },
   moderate: {
-    adrUpliftPercent: 0.05,
-    occupancyUpliftPoints: 0.02,
-    groupPricingImprovementPercent: 0.04,
-    channelShiftPercent: 0,
-    laborHoursSavedPerWeek: 0,
+    revparUpliftPercent: 0.05, // 5% RevPAR uplift
     marketGrowthRate: 0.025,
   },
   aggressive: {
-    adrUpliftPercent: 0.08,
-    occupancyUpliftPoints: 0.035,
-    groupPricingImprovementPercent: 0.07,
-    channelShiftPercent: 0,
-    laborHoursSavedPerWeek: 0,
+    revparUpliftPercent: 0.08, // 8% RevPAR uplift
     marketGrowthRate: 0.03,
   },
 };
+
+/** ADR share of the RevPAR uplift (open pricing is primarily rate-driven) */
+const ADR_SHARE = 0.6;
 
 export function calculateLaborSaved(inputs: PropertyInputs): number {
   // Based on hours per week saved
@@ -104,34 +95,32 @@ export function calculateROI(
   const annualRooms = totalRooms * 365;
 
   // Fraction of room nights the RMS can actually optimize (yieldable segments)
-  // Non-yieldable = group/corporate at static negotiated rates
   const yieldable = inputs.yieldablePercent ?? (1 - inputs.groupBusinessPercent);
 
-  // New metrics after Duetto on yieldable segments
-  const newADR = currentADR * (1 + assumptions.adrUpliftPercent);
-  const newOccupancy = Math.min(0.98, currentOccupancy + assumptions.occupancyUpliftPoints);
-  const yieldableNewRevPAR = newADR * newOccupancy;
+  // ── RevPAR-led model ──────────────────────────────────────────────────────
+  // Single RevPAR uplift assumption; decomposed into ADR (60%) and occupancy (40%).
+  const revparUplift = assumptions.revparUpliftPercent;
 
-  // Incremental ADR revenue on yieldable rooms (current occ as base)
-  const incrementalADRRevenue = (newADR - currentADR) * currentOccupancy * annualRooms * yieldable;
+  // Yieldable-segment new metrics
+  const yieldableNewRevPAR = currentRevPAR * (1 + revparUplift);
+  const yieldableNewADR    = currentADR * (1 + revparUplift * ADR_SHARE);
+  const yieldableNewOcc    = Math.min(0.98, yieldableNewRevPAR / yieldableNewADR);
 
-  // Incremental occupancy revenue on yieldable rooms (using new ADR)
-  const incrementalOccRevenue = newADR * (newOccupancy - currentOccupancy) * annualRooms * yieldable;
-
-  // Combined RevPAR uplift scaled to yieldable inventory
-  const combinedRevPARUplift = (yieldableNewRevPAR - currentRevPAR) * annualRooms * yieldable;
+  // Incremental revenue on yieldable inventory
+  const incrementalADRRevenue = (yieldableNewADR - currentADR) * currentOccupancy * annualRooms * yieldable;
+  const incrementalOccRevenue = yieldableNewADR * (yieldableNewOcc - currentOccupancy) * annualRooms * yieldable;
+  const combinedRevPARUplift  = (yieldableNewRevPAR - currentRevPAR) * annualRooms * yieldable;
   const annualIncrementalRoomRevenue = combinedRevPARUplift;
 
-  // Hotel-wide blended RevPAR after RMS optimization
-  const newRevPAR = currentRevPAR + (yieldableNewRevPAR - currentRevPAR) * yieldable;
+  // Hotel-wide blended metrics (yieldable uplift scaled by yieldable fraction)
+  const newRevPAR    = currentRevPAR + (yieldableNewRevPAR - currentRevPAR) * yieldable;
+  const newADR       = currentADR    + (yieldableNewADR    - currentADR)    * yieldable;
+  const newOccupancy = newADR > 0 ? Math.min(0.98, newRevPAR / newADR) : currentOccupancy;
 
-  // Group revenue optimization via Blockbuster (on group business)
-  const currentGroupRevenue = currentRevPAR * totalRooms * 365 * inputs.groupBusinessPercent;
-  const groupRevenue = inputs.groupBusinessPercent > 0
-    ? currentGroupRevenue * assumptions.groupPricingImprovementPercent
-    : 0;
+  // Group revenue: removed from model per product decision
+  const groupRevenue = 0;
 
-  // Distribution savings zeroed out (OTA channel shift removed from model)
+  // Distribution savings: removed from model
   const distributionSavings = 0;
 
   // Labor savings from automation of manual pricing tasks
@@ -142,16 +131,17 @@ export function calculateROI(
       : hoursWeeklySaved * 52 * hourlyLaborRate;
 
   // Totals
-  const totalIncrementalRevenue = annualIncrementalRoomRevenue + groupRevenue;
+  const totalIncrementalRevenue = annualIncrementalRoomRevenue; // group removed
   const totalCostSavings = laborSavings;
   const totalAnnualImpact = totalIncrementalRevenue + totalCostSavings;
 
   // ROI metrics
-  const netROIPercent =
-    ((totalAnnualImpact - inputs.duettoAnnualCost) / inputs.duettoAnnualCost) * 100;
-  const paybackMonths =
-    inputs.duettoAnnualCost / (totalAnnualImpact / 12);
-  const roiMultiple = totalAnnualImpact / inputs.duettoAnnualCost;
+  const netROIPercent   = inputs.duettoAnnualCost > 0
+    ? ((totalAnnualImpact - inputs.duettoAnnualCost) / inputs.duettoAnnualCost) * 100 : 0;
+  const paybackMonths   = totalAnnualImpact > 0
+    ? inputs.duettoAnnualCost / (totalAnnualImpact / 12) : 0;
+  const roiMultiple     = inputs.duettoAnnualCost > 0
+    ? totalAnnualImpact / inputs.duettoAnnualCost : 0;
 
   return {
     incrementalADRRevenue,
@@ -228,14 +218,15 @@ export function estimateDuettoCost(rooms: number): number {
   return 120000;
 }
 
-/** True when the PMS name indicates Opera Cloud (case-insensitive) */
+/** True when the PMS name indicates Opera Cloud (triggers OHIP fee) */
 export function isOperaCloud(pmsName: string): boolean {
-  return pmsName.toLowerCase().includes("opera cloud") || pmsName.toLowerCase().includes("ohip");
+  const lower = pmsName.toLowerCase();
+  return lower.includes("opera cloud") || lower.includes("ohip");
 }
 
 /**
- * Compute the effective annual recurring Duetto cost.
- * = subscription (or auto-estimate) + OHIP connectivity fee if Opera Cloud.
+ * Effective annual recurring Duetto cost.
+ * = subscription (or auto-estimate) + OHIP fee if Opera Cloud PMS.
  */
 export function computeDuettoAnnualCost(inputs: PropertyInputs): number {
   const subscription = inputs.subscriptionCost > 0
@@ -246,10 +237,10 @@ export function computeDuettoAnnualCost(inputs: PropertyInputs): number {
 }
 
 /**
- * Compute the Duetto investment for each of the 5 projection years.
- * Year 1:  annualCost + implementationFee (one-time)
- * Years 2..contractYears: annualCost (no change during initial term)
- * Years contractYears+1..5: annualCost × 1.05^(year - contractYears)  (5% annual escalation)
+ * Per-year Duetto investment for the 5-year projection.
+ * Year 1: annualCost + implementationFee (one-time)
+ * Years 2..contractYears: annualCost (no change in initial term)
+ * Years contractYears+1..5: annualCost × 1.05^(year − contractYears)
  */
 export function computeDuettoYearlyCosts(inputs: PropertyInputs): number[] {
   const annualCost = inputs.duettoAnnualCost > 0
@@ -260,10 +251,10 @@ export function computeDuettoYearlyCosts(inputs: PropertyInputs): number[] {
 
   return Array.from({ length: 5 }, (_, i) => {
     const year = i + 1;
-    const recurringCost = year > contractYears
+    const recurring = year > contractYears
       ? annualCost * Math.pow(1.05, year - contractYears)
       : annualCost;
-    return recurringCost + (year === 1 ? implFee : 0);
+    return recurring + (year === 1 ? implFee : 0);
   });
 }
 
@@ -277,7 +268,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   currentADR: 189,
   currentOccupancy: 0.72,
   groupBusinessPercent: 0.35,
-  yieldablePercent: 0.65, // 65% yieldable (non-group transient + some negotiated flex)
+  yieldablePercent: 0.65,
   directBookingPercent: 0.42,
   otaPercent: 0.58,
   rmApproach: "spreadsheets",

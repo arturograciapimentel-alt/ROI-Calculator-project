@@ -6,7 +6,7 @@ import {
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, SliderInput } from "@/components/ui/InputField";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, formatPercent, estimateDuettoCost, aggregatePortfolioInputs } from "@/lib/calculations";
+import { formatCurrency, formatPercent, computeDuettoAnnualCost, aggregatePortfolioInputs } from "@/lib/calculations";
 import type { Scenario, ScenarioAssumptions } from "@/lib/types";
 import { clsx } from "clsx";
 
@@ -73,7 +73,7 @@ export function Tab2ROIProjection() {
   const currency = inputs.currency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
-  const effectiveCost = effectiveInputs.duettoAnnualCost || estimateDuettoCost(effectiveInputs.totalRooms);
+  const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
   const currentRevPAR = effectiveInputs.currentADR * effectiveInputs.currentOccupancy;
   const revPARLift = proj.newRevPAR - currentRevPAR;
   const revPARLiftPercent = currentRevPAR > 0 ? (revPARLift / currentRevPAR) * 100 : 0;
@@ -84,14 +84,11 @@ export function Tab2ROIProjection() {
     { name: "Projected RevPAR", value: parseFloat(proj.newRevPAR.toFixed(2)), fill: "#68FFF2" },
   ];
 
-  // ADR contribution to RevPAR uplift vs Occupancy contribution
-  const adrContribution = proj.incrementalADRRevenue;
-  const occContribution = proj.incrementalOccRevenue;
+  // RevPAR uplift decomposed into ADR contribution and Occupancy contribution
   const revPARBreakdownData = [
-    { name: "ADR Impact", value: adrContribution, fill: "#C4FF45" },
-    { name: "Occ. Impact", value: occContribution, fill: "#68FFF2" },
-    { name: "Group Rev.", value: proj.groupRevenue, fill: "#7459EE" },
-    { name: "Labor Savings", value: proj.laborSavings, fill: "#FFD9A0" },
+    { name: "ADR Impact",     value: proj.incrementalADRRevenue, fill: "#C4FF45" },
+    { name: "Occ. Impact",   value: proj.incrementalOccRevenue, fill: "#68FFF2" },
+    { name: "Labor Savings", value: proj.laborSavings,           fill: "#FFD9A0" },
   ].filter((d) => d.value > 0);
 
   const asmp = assumptions[scenario];
@@ -235,41 +232,38 @@ export function Tab2ROIProjection() {
           {SCENARIO_LABELS[scenario]} Scenario Assumptions
         </h3>
         <p className="text-white/40 text-xs font-sans mb-6">
-          Fine-tune the projections for this scenario. Changes update all calculations instantly.
+          Set the expected RevPAR uplift for this scenario. The model decomposes it: 60% attributed to ADR improvement (open pricing), 40% to occupancy (demand intelligence).
         </p>
-        <div className="grid grid-cols-3 gap-x-10 gap-y-6">
-          <InputField label="ADR Uplift from Open Pricing" tooltip="Additional rate revenue from Duetto's dynamic open pricing methodology vs. BAR-based systems. Applied to yieldable inventory.">
+        <div className="max-w-md">
+          <InputField
+            label="RevPAR Uplift"
+            tooltip="Total RevPAR improvement from Duetto vs. current performance. Applied to yieldable inventory only. Decomposed internally: 60% from ADR (open pricing), 40% from occupancy (demand forecasting)."
+          >
             <SliderInput
-              value={Math.round(asmp.adrUpliftPercent * 100)}
+              value={Math.round(asmp.revparUpliftPercent * 10) / 0.1}
               min={1}
               max={15}
               step={0.5}
-              onChange={(v) => updateAssumption(scenario, "adrUpliftPercent", v / 100)}
+              onChange={(v) => updateAssumption(scenario, "revparUpliftPercent", v / 100)}
               formatValue={(v) => `+${v}%`}
             />
           </InputField>
-
-          <InputField label="Occupancy Point Improvement" tooltip="Additional occupancy percentage points from superior demand forecasting and length-of-stay optimization. Applied to yieldable inventory.">
-            <SliderInput
-              value={Math.round(asmp.occupancyUpliftPoints * 100)}
-              min={0}
-              max={8}
-              step={0.5}
-              onChange={(v) => updateAssumption(scenario, "occupancyUpliftPoints", v / 100)}
-              formatValue={(v) => `+${v} pts`}
-            />
-          </InputField>
-
-          <InputField label="Group Pricing Improvement" tooltip="Improved group rates and displacement analysis via Blockbuster reduces underpriced group business">
-            <SliderInput
-              value={Math.round(asmp.groupPricingImprovementPercent * 100)}
-              min={0}
-              max={15}
-              step={0.5}
-              onChange={(v) => updateAssumption(scenario, "groupPricingImprovementPercent", v / 100)}
-              formatValue={(v) => `+${v}%`}
-            />
-          </InputField>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 max-w-md">
+          <div className="p-3 rounded-lg bg-gold-500/8 border border-gold-500/20 text-center">
+            <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider">ADR component</p>
+            <p className="text-gold-400 font-semibold text-sm mt-0.5">
+              +{(asmp.revparUpliftPercent * 60).toFixed(1)}%
+            </p>
+            <p className="text-white/20 text-[10px] font-sans">open pricing</p>
+          </div>
+          <div className="p-3 rounded-lg bg-[#7459EE]/8 border border-[#7459EE]/20 text-center">
+            <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider">Occupancy component</p>
+            <p className="text-[#7459EE] font-semibold text-sm mt-0.5">
+              +{(asmp.revparUpliftPercent * 40).toFixed(1)}%
+            </p>
+            <p className="text-white/20 text-[10px] font-sans">demand intelligence</p>
+          </div>
         </div>
       </div>
 
@@ -328,14 +322,14 @@ export function Tab2ROIProjection() {
             <p className="text-white/60 text-xs font-sans uppercase tracking-wider">Occupancy Uplift</p>
           </div>
           <p className="text-2xl font-serif font-bold text-[#7459EE]">
-            {formatCurrency(proj.annualIncrementalRoomRevenue * (proj.incrementalOccRevenue / (proj.incrementalADRRevenue + proj.incrementalOccRevenue || 1)) + proj.groupRevenue, currency, true)}
+            {formatCurrency(proj.incrementalOccRevenue, currency, true)}
           </p>
           <p className="text-white/40 text-xs font-sans">
-            {formatPercent(effectiveInputs.currentOccupancy)} → {formatPercent(proj.newOccupancy)} {isPortfolioMode ? "blended " : ""}occupancy · Group: +{formatCurrency(proj.groupRevenue, currency, true)}
+            {formatPercent(effectiveInputs.currentOccupancy)} → {formatPercent(proj.newOccupancy)} {isPortfolioMode ? "blended " : ""}occupancy
           </p>
           <ExplanationCard
             title="Demand Intelligence"
-            body="AI-powered forecasting fills shoulder dates, optimizes LOS restrictions, and reduces occupancy gaps. Blockbuster optimizes group rate recommendations."
+            body="AI-powered demand forecasting fills shoulder dates, optimizes LOS restrictions, and reduces occupancy gaps across all yieldable segments."
             color="blue"
           />
         </div>
@@ -395,10 +389,6 @@ export function Tab2ROIProjection() {
                 {
                   label: "Incremental Room Rev.",
                   fmt: (p: typeof projections.conservative) => formatCurrency(p.annualIncrementalRoomRevenue, currency, true),
-                },
-                {
-                  label: "Group Revenue Uplift",
-                  fmt: (p: typeof projections.conservative) => formatCurrency(p.groupRevenue, currency, true),
                 },
                 {
                   label: "Labor Savings",
