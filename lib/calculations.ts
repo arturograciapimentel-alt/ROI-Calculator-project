@@ -180,6 +180,7 @@ export function calculateYearlyProjections(
   hourlyLaborRate: number
 ): YearlyProjection[] {
   const baseProjection = calculateROI(inputs, assumptions, hourlyLaborRate);
+  const yearlyCosts = computeDuettoYearlyCosts(inputs);
   const years: YearlyProjection[] = [];
   let cumulativeNetBenefit = 0;
 
@@ -194,17 +195,19 @@ export function calculateYearlyProjections(
     const costSavings =
       baseProjection.totalCostSavings * marketMultiplier * rampFactor;
     const totalImpact = incrementalRevenue + costSavings;
-    const netBenefit = totalImpact - inputs.duettoAnnualCost;
+    const duettoInvestment = yearlyCosts[year - 1];
+    const netBenefit = totalImpact - duettoInvestment;
     cumulativeNetBenefit += netBenefit;
-    const roiPercent =
-      ((totalImpact - inputs.duettoAnnualCost) / inputs.duettoAnnualCost) * 100;
+    const roiPercent = duettoInvestment > 0
+      ? ((totalImpact - duettoInvestment) / duettoInvestment) * 100
+      : 0;
 
     years.push({
       year,
       incrementalRevenue,
       costSavings,
       totalImpact,
-      duettoInvestment: inputs.duettoAnnualCost,
+      duettoInvestment,
       netBenefit,
       cumulativeNetBenefit,
       roiPercent,
@@ -215,7 +218,7 @@ export function calculateYearlyProjections(
 }
 
 export function estimateDuettoCost(rooms: number): number {
-  // Rough estimate based on property size
+  // Rough subscription estimate based on property size
   if (rooms < 100) return 18000;
   if (rooms < 200) return 28000;
   if (rooms < 350) return 42000;
@@ -223,6 +226,45 @@ export function estimateDuettoCost(rooms: number): number {
   if (rooms < 750) return 75000;
   if (rooms < 1000) return 95000;
   return 120000;
+}
+
+/** True when the PMS name indicates Opera Cloud (case-insensitive) */
+export function isOperaCloud(pmsName: string): boolean {
+  return pmsName.toLowerCase().includes("opera cloud") || pmsName.toLowerCase().includes("ohip");
+}
+
+/**
+ * Compute the effective annual recurring Duetto cost.
+ * = subscription (or auto-estimate) + OHIP connectivity fee if Opera Cloud.
+ */
+export function computeDuettoAnnualCost(inputs: PropertyInputs): number {
+  const subscription = inputs.subscriptionCost > 0
+    ? inputs.subscriptionCost
+    : estimateDuettoCost(inputs.totalRooms);
+  const ohip = isOperaCloud(inputs.pmsName || "") ? (inputs.ohipConnectivityFee || 0) : 0;
+  return subscription + ohip;
+}
+
+/**
+ * Compute the Duetto investment for each of the 5 projection years.
+ * Year 1:  annualCost + implementationFee (one-time)
+ * Years 2..contractYears: annualCost (no change during initial term)
+ * Years contractYears+1..5: annualCost × 1.05^(year - contractYears)  (5% annual escalation)
+ */
+export function computeDuettoYearlyCosts(inputs: PropertyInputs): number[] {
+  const annualCost = inputs.duettoAnnualCost > 0
+    ? inputs.duettoAnnualCost
+    : computeDuettoAnnualCost(inputs);
+  const implFee = inputs.implementationFee || 0;
+  const contractYears = Math.max(1, inputs.initialContractYears || 1);
+
+  return Array.from({ length: 5 }, (_, i) => {
+    const year = i + 1;
+    const recurringCost = year > contractYears
+      ? annualCost * Math.pow(1.05, year - contractYears)
+      : annualCost;
+    return recurringCost + (year === 1 ? implFee : 0);
+  });
 }
 
 export const SAMPLE_PROPERTY: PropertyInputs = {
@@ -246,6 +288,11 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   otaCommissionRate: 0.18,
   cpor: 45,
   annualRMLaborCost: 180000,
+  pmsName: "",
+  subscriptionCost: 42000,
+  implementationFee: 15000,
+  ohipConnectivityFee: 0,
+  initialContractYears: 2,
   duettoAnnualCost: 42000,
 };
 

@@ -58,7 +58,13 @@ export interface PropertyInputs {
   cpor: number;
   annualRMLaborCost: number;
 
-  // Duetto cost
+  // Duetto investment breakdown
+  pmsName: string;              // PMS system (e.g. "Opera Cloud" triggers OHIP fee)
+  subscriptionCost: number;     // Annual recurring subscription (0 = auto-estimate)
+  implementationFee: number;    // One-time fee charged in Year 1 only
+  ohipConnectivityFee: number;  // Annual OHIP fee (Opera Cloud only, recurring)
+  initialContractYears: number; // Length of initial contract term (1-5)
+  // Derived — computed from breakdown above before passing to calculations
   duettoAnnualCost: number;
 }
 

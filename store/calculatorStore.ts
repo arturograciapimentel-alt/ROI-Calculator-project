@@ -17,6 +17,7 @@ import {
   DEFAULT_ASSUMPTIONS,
   SAMPLE_PROPERTY,
   estimateDuettoCost,
+  computeDuettoAnnualCost,
   aggregatePortfolioInputs,
   createPortfolioProperty,
 } from "@/lib/calculations";
@@ -65,6 +66,11 @@ const DEFAULT_INPUTS: PropertyInputs = {
   otaCommissionRate: 0.18,
   cpor: 45,
   annualRMLaborCost: 100000,
+  pmsName: "",
+  subscriptionCost: 0,
+  implementationFee: 0,
+  ohipConnectivityFee: 0,
+  initialContractYears: 1,
   duettoAnnualCost: 0,
 };
 
@@ -95,7 +101,8 @@ function recalculate(
     ? aggregatePortfolioInputs(inputs, portfolioProperties)
     : inputs;
 
-  const duettoAnnualCost = baseInputs.duettoAnnualCost || estimateDuettoCost(baseInputs.totalRooms);
+  // Derive annual recurring cost from breakdown fields; fall back to auto-estimate
+  const duettoAnnualCost = computeDuettoAnnualCost(baseInputs);
   const effectiveInputs = { ...baseInputs, duettoAnnualCost };
 
   const projections = {

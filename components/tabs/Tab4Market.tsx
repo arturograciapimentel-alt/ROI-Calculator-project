@@ -404,6 +404,44 @@ function PctBadge({ value }: { value: number | null }) {
   );
 }
 
+// Extracted to module level so React never unmounts it on parent re-render
+function HotelNumInput({
+  storeValue,
+  field,
+  isInteger,
+  onUpdate,
+}: {
+  storeValue: number;
+  field: keyof Omit<DuettoMarketHotel, "id" | "name">;
+  isInteger: boolean;
+  onUpdate: (updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
+}) {
+  const [local, setLocal] = React.useState(storeValue === 0 ? "" : String(storeValue));
+  // Sync when the store value changes from an external source (not user typing)
+  const prevStore = React.useRef(storeValue);
+  if (prevStore.current !== storeValue && document.activeElement?.getAttribute("data-field") !== field) {
+    prevStore.current = storeValue;
+    setLocal(storeValue === 0 ? "" : String(storeValue));
+  }
+  return (
+    <input
+      type="number"
+      min={0}
+      step={isInteger ? 1 : 0.01}
+      value={local}
+      data-field={field}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={(e) => {
+        const parsed = parseFloat(e.target.value) || 0;
+        prevStore.current = parsed;
+        onUpdate({ [field]: parsed });
+      }}
+      className="w-full bg-navy-900/60 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs font-sans text-right focus:border-gold-500/50 focus:outline-none focus:ring-1 focus:ring-gold-500/20 transition-all placeholder:text-white/20"
+      placeholder="0"
+    />
+  );
+}
+
 function HotelInputCard({
   hotel,
   index,
@@ -418,28 +456,6 @@ function HotelInputCard({
   const currSymbol = (
     { USD: "$", EUR: "€", GBP: "£", MXN: "$", CAD: "$", AUD: "$", JPY: "¥" } as Record<string, string>
   )[currency] ?? "$";
-
-  function NumInput({
-    value,
-    field,
-    isInteger = false,
-  }: {
-    value: number;
-    field: keyof Omit<DuettoMarketHotel, "id" | "name">;
-    isInteger?: boolean;
-  }) {
-    return (
-      <input
-        type="number"
-        min={0}
-        step={isInteger ? 1 : 0.01}
-        value={value || ""}
-        onChange={(e) => onUpdate({ [field]: parseFloat(e.target.value) || 0 })}
-        className="w-full bg-navy-900/60 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs font-sans text-right focus:border-gold-500/50 focus:outline-none focus:ring-1 focus:ring-gold-500/20 transition-all placeholder:text-white/20"
-        placeholder="0"
-      />
-    );
-  }
 
   const rnPct   = pctChange(hotel.currentRoomNights,   hotel.priorRoomNights);
   const adrPct  = pctChange(hotel.currentADR,          hotel.priorADR);
@@ -477,17 +493,17 @@ function HotelInputCard({
           <tbody>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Current</td>
-              <td className="py-1.5 px-2"><NumInput value={hotel.currentRoomNights}  field="currentRoomNights"  isInteger /></td>
-              <td className="py-1.5 px-2"><NumInput value={hotel.currentADR}         field="currentADR" /></td>
-              <td className="py-1.5 px-2"><NumInput value={hotel.currentRevPAR}      field="currentRevPAR" /></td>
-              <td className="py-1.5 pl-2"><NumInput value={hotel.currentRoomRevenue} field="currentRoomRevenue" isInteger /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomNights}  field="currentRoomNights"  isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentADR}         field="currentADR"         isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}      field="currentRevPAR"      isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 pl-2"><HotelNumInput storeValue={hotel.currentRoomRevenue} field="currentRoomRevenue"  isInteger onUpdate={onUpdate} /></td>
             </tr>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Prior</td>
-              <td className="py-1.5 px-2"><NumInput value={hotel.priorRoomNights}    field="priorRoomNights"  isInteger /></td>
-              <td className="py-1.5 px-2"><NumInput value={hotel.priorADR}           field="priorADR" /></td>
-              <td className="py-1.5 px-2"><NumInput value={hotel.priorRevPAR}        field="priorRevPAR" /></td>
-              <td className="py-1.5 pl-2"><NumInput value={hotel.priorRoomRevenue}   field="priorRoomRevenue" isInteger /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomNights}    field="priorRoomNights"    isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorADR}           field="priorADR"           isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}        field="priorRevPAR"        isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 pl-2"><HotelNumInput storeValue={hotel.priorRoomRevenue}   field="priorRoomRevenue"   isInteger onUpdate={onUpdate} /></td>
             </tr>
             <tr className="border-t border-white/12">
               <td className="py-1.5 pr-3 text-white/25 text-[10px] uppercase tracking-wider whitespace-nowrap">YoY</td>

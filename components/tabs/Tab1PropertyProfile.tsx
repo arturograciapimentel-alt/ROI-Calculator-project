@@ -4,7 +4,7 @@ import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, TextInput, SelectInput, SliderInput, StarRating } from "@/components/ui/InputField";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost } from "@/lib/calculations";
+import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost, isOperaCloud, computeDuettoAnnualCost } from "@/lib/calculations";
 import type { CoStarBenchmark, PortfolioProperty, PropertyInputs, PropertyType } from "@/lib/types";
 
 function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
@@ -620,6 +620,126 @@ export function Tab1PropertyProfile() {
           )}
         </div>
       </div>
+
+      {/* Section: Duetto Investment */}
+      {(() => {
+        const sectionNum = isPortfolioMode ? 5 : 4;
+        const autoSubEstimate = estimateDuettoCost(inputs.totalRooms);
+        const showOhip = isOperaCloud(inputs.pmsName || "");
+        const effectiveSubscription = inputs.subscriptionCost > 0 ? inputs.subscriptionCost : autoSubEstimate;
+        const effectiveOhip = showOhip ? (inputs.ohipConnectivityFee || 0) : 0;
+        const annualRecurring = effectiveSubscription + effectiveOhip;
+        const yearOneCost = annualRecurring + (inputs.implementationFee || 0);
+        const contractYears = inputs.initialContractYears || 1;
+        return (
+          <div className="glass-card rounded-2xl p-6 border border-white/8">
+            <SectionHeader
+              number={sectionNum}
+              title="Duetto Investment"
+              subtitle="Cost breakdown used across all ROI projections and the 5-year model"
+            />
+            <div className="grid grid-cols-2 gap-5">
+              {/* PMS */}
+              <InputField
+                label="Current PMS System"
+                tooltip="Enter your property management system. If you use Opera Cloud, an OHIP connectivity fee field will appear."
+              >
+                <TextInput
+                  value={inputs.pmsName || ""}
+                  onChange={(e) => update("pmsName", e.target.value)}
+                  placeholder="e.g. Opera Cloud, Mews, Apaleo..."
+                />
+              </InputField>
+
+              {/* Initial contract length */}
+              <InputField
+                label="Initial Contract Length"
+                tooltip="Length of the initial Duetto contract term. A 5% annual price escalation applies from year 1 after the contract end date."
+              >
+                <SelectInput
+                  value={String(inputs.initialContractYears || 1)}
+                  onChange={(e) => update("initialContractYears", parseInt(e.target.value))}
+                >
+                  {[1, 2, 3, 4, 5].map((y) => (
+                    <option key={y} value={y}>{y} {y === 1 ? "year" : "years"}</option>
+                  ))}
+                </SelectInput>
+              </InputField>
+
+              {/* Subscription cost */}
+              <InputField
+                label={`Annual Subscription Cost — ${sym}`}
+                tooltip={`Recurring annual Duetto subscription fee. Leave 0 to auto-estimate (${formatCurrency(autoSubEstimate, inputs.currency)}/yr for ${inputs.totalRooms} rooms).`}
+              >
+                <TextInput
+                  type="number"
+                  value={inputs.subscriptionCost || ""}
+                  onChange={(e) => update("subscriptionCost", parseFloat(e.target.value) || 0)}
+                  prefix={sym}
+                  placeholder={`${autoSubEstimate.toLocaleString()} (auto)`}
+                />
+              </InputField>
+
+              {/* Implementation fee */}
+              <InputField
+                label={`Implementation Fee — ${sym}`}
+                tooltip="One-time fee charged in Year 1 only. Does not recur in subsequent years."
+              >
+                <TextInput
+                  type="number"
+                  value={inputs.implementationFee || ""}
+                  onChange={(e) => update("implementationFee", parseFloat(e.target.value) || 0)}
+                  prefix={sym}
+                  placeholder="0"
+                />
+              </InputField>
+
+              {/* OHIP fee — only shown for Opera Cloud */}
+              {showOhip && (
+                <InputField
+                  label={`OHIP Connectivity Fee — ${sym}/yr`}
+                  tooltip="Annual Oracle Hospitality Integration Platform fee. Applies to Opera Cloud properties only. Recurring every year."
+                >
+                  <TextInput
+                    type="number"
+                    value={inputs.ohipConnectivityFee || ""}
+                    onChange={(e) => update("ohipConnectivityFee", parseFloat(e.target.value) || 0)}
+                    prefix={sym}
+                    placeholder="0"
+                  />
+                </InputField>
+              )}
+            </div>
+
+            {/* Cost summary */}
+            <div className="mt-5 grid grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
+                <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Year 1 Total Cost</p>
+                <p className="text-xl font-serif font-bold text-[#FF5900]">{formatCurrency(yearOneCost, inputs.currency)}</p>
+                <p className="text-white/25 text-[10px] font-sans mt-1">
+                  Subscription{inputs.implementationFee > 0 ? " + impl. fee" : ""}{effectiveOhip > 0 ? " + OHIP" : ""}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
+                <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Annual Recurring Cost</p>
+                <p className="text-xl font-serif font-bold text-white">{formatCurrency(annualRecurring, inputs.currency)}</p>
+                <p className="text-white/25 text-[10px] font-sans mt-1">
+                  Yrs 2–{contractYears}{effectiveOhip > 0 ? " (incl. OHIP)" : ""}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
+                <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Post-Contract Rate</p>
+                <p className="text-xl font-serif font-bold text-gold-400">
+                  {formatCurrency(annualRecurring * 1.05, inputs.currency)}<span className="text-sm text-gold-400/60">/yr</span>
+                </p>
+                <p className="text-white/25 text-[10px] font-sans mt-1">
+                  +5% p.a. from yr {contractYears + 1}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, SliderInput } from "@/components/ui/InputField";
-import { formatCurrency, formatPercent, estimateDuettoCost, aggregatePortfolioInputs } from "@/lib/calculations";
+import { formatCurrency, formatPercent, estimateDuettoCost, computeDuettoAnnualCost, computeDuettoYearlyCosts, aggregatePortfolioInputs } from "@/lib/calculations";
 import { clsx } from "clsx";
 
 const YEAR_LABELS = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -30,7 +30,11 @@ export function Tab3FiveYear() {
   const currency = inputs.currency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
-  const effectiveCost = effectiveInputs.duettoAnnualCost || estimateDuettoCost(effectiveInputs.totalRooms);
+  const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
+  const yearlyCosts = computeDuettoYearlyCosts(effectiveInputs);
+  const contractYears = effectiveInputs.initialContractYears || 1;
+  const hasImplementationFee = (effectiveInputs.implementationFee || 0) > 0;
+  const hasEscalation = contractYears <= 4; // escalation kicks in within the 5-yr window
   const asmp = assumptions[scenario];
 
   const totalFiveYearImpact = yearlyProjections.reduce((sum, y) => sum + y.totalImpact, 0);
@@ -139,8 +143,14 @@ export function Tab3FiveYear() {
       {/* Year assumptions */}
       <div className="glass-card rounded-2xl p-6 border border-white/8">
         <h3 className="text-white font-serif font-semibold mb-1">Projection Settings</h3>
-        <p className="text-white/40 text-xs font-sans mb-5">
+        <p className="text-white/40 text-xs font-sans mb-1">
           Year 1 assumes 75% average impact due to implementation ramp (50% Q1, 80% Q2-Q3, 100% Q4+)
+        </p>
+        <p className="text-white/30 text-xs font-sans mb-5">
+          {hasImplementationFee && `Year 1 Duetto investment includes one-time implementation fee (${formatCurrency(effectiveInputs.implementationFee || 0, currency)}). `}
+          {hasEscalation
+            ? `Annual subscription escalates +5%/yr from Year ${contractYears + 1} (after initial ${contractYears}-year term).`
+            : "No price escalation within the 5-year window (contract term covers full period)."}
         </p>
         <div className="grid grid-cols-2 gap-8">
           <InputField label="Annual Market Growth Rate" tooltip="Market-wide ADR/RevPAR growth assumption applied to compound projections">
