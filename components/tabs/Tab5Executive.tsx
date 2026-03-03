@@ -185,7 +185,7 @@ export function Tab5Executive() {
                 ROI Impact Analysis — {inputs.propertyName || "Property Name"}
               </h1>
               <p className="text-white/40 text-xs font-sans mt-1">
-                Prepared by {preparedBy || "[Sales Representative]"} ·{" "}
+                Prepared by {preparedBy || "[Director of Hospitality Solutions]"} ·{" "}
                 {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} ·{" "}
                 <span className="text-gold-500">CONFIDENTIAL</span>
               </p>
