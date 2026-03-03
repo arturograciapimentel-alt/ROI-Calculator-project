@@ -60,15 +60,15 @@ export function formatNumber(value: number): string {
 // Default assumptions by scenario
 export const DEFAULT_ASSUMPTIONS = {
   conservative: {
-    revparUpliftPercent: 0.03, // 3% RevPAR uplift
+    revparUpliftPercent: 0.05, // 5% RevPAR uplift
     marketGrowthRate: 0.02,
   },
   moderate: {
-    revparUpliftPercent: 0.05, // 5% RevPAR uplift
+    revparUpliftPercent: 0.08, // 8% RevPAR uplift
     marketGrowthRate: 0.025,
   },
   aggressive: {
-    revparUpliftPercent: 0.08, // 8% RevPAR uplift
+    revparUpliftPercent: 0.12, // 12% RevPAR uplift
     marketGrowthRate: 0.03,
   },
 };

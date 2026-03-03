@@ -146,14 +146,14 @@ export function Tab2ROIProjection() {
           <div className="flex justify-center gap-8 mt-6 pt-6 border-t border-white/10">
             <div className="text-center">
               <p className="text-3xl font-serif font-bold text-emerald-brand">
-                +{formatCurrency(revPARLift, currency)}
+                {revPARLift >= 0 ? "+" : ""}{formatCurrency(revPARLift, currency)}
               </p>
               <p className="text-white/40 text-xs font-sans mt-1">RevPAR Lift</p>
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
               <p className="text-3xl font-serif font-bold text-gold-400">
-                +{revPARLiftPercent.toFixed(1)}%
+                {revPARLiftPercent >= 0 ? "+" : ""}{revPARLiftPercent.toFixed(1)}%
               </p>
               <p className="text-white/40 text-xs font-sans mt-1">RevPAR Improvement</p>
             </div>
@@ -200,7 +200,7 @@ export function Tab2ROIProjection() {
           </ResponsiveContainer>
           <div className="mt-4 p-3 rounded-xl bg-emerald-brand/8 border border-emerald-brand/20 flex items-center justify-between">
             <span className="text-white/50 text-xs font-sans">RevPAR lift on {Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory</span>
-            <span className="text-emerald-brand font-semibold text-sm">+{revPARLiftPercent.toFixed(1)}%</span>
+            <span className="text-emerald-brand font-semibold text-sm">{revPARLiftPercent >= 0 ? "+" : ""}{revPARLiftPercent.toFixed(1)}%</span>
           </div>
         </div>
 
@@ -366,8 +366,12 @@ export function Tab2ROIProjection() {
               {[
                 {
                   label: "RevPAR Lift",
-                  fmt: (p: typeof projections.conservative) =>
-                    `+${formatCurrency(p.newRevPAR - currentRevPAR, currency)} (+${currentRevPAR > 0 ? ((p.newRevPAR - currentRevPAR) / currentRevPAR * 100).toFixed(1) : "0"}%)`,
+                  fmt: (p: typeof projections.conservative) => {
+                    const lift = p.newRevPAR - currentRevPAR;
+                    const pct = currentRevPAR > 0 ? (lift / currentRevPAR * 100).toFixed(1) : "0";
+                    const sign = lift >= 0 ? "+" : "";
+                    return `${sign}${formatCurrency(lift, currency)} (${sign}${pct}%)`;
+                  },
                   bold: true,
                 },
                 {
@@ -433,7 +437,7 @@ export function Tab2ROIProjection() {
       <div className="grid grid-cols-4 gap-4">
         <MetricCard
           label="RevPAR Improvement"
-          value={`+${revPARLiftPercent.toFixed(1)}%`}
+          value={`${revPARLiftPercent >= 0 ? "+" : ""}${revPARLiftPercent.toFixed(1)}%`}
           subtitle={`${formatCurrency(currentRevPAR, currency)} → ${formatCurrency(proj.newRevPAR, currency)}`}
           variant="emerald"
           size="sm"

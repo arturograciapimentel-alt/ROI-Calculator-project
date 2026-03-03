@@ -69,7 +69,7 @@ export interface PropertyInputs {
 }
 
 export interface ScenarioAssumptions {
-  /** Primary RevPAR uplift driver. Decomposed internally: 60% ADR / 40% occupancy. */
+  /** Primary RevPAR uplift driver (0–0.50). Decomposed internally: 60% ADR / 40% occupancy. */
   revparUpliftPercent: number;
   marketGrowthRate: number;
 }

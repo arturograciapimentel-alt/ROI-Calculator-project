@@ -159,7 +159,7 @@ export function Tab5Executive() {
           <input
             value={preparedBy}
             onChange={(e) => setPreparedBy(e.target.value)}
-            placeholder="Your name / Sales rep"
+            placeholder="Your name / Director of Hospitality Solutions"
             className="w-full bg-transparent text-white text-sm font-sans outline-none placeholder-white/20"
           />
         </div>
