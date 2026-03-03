@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs } from "@/lib/calculations";
-import type { CoStarBenchmark, CoStarClassMetrics } from "@/lib/types";
+import type { CoStarBenchmark, CoStarClassMetrics, DuettoMarketHotel } from "@/lib/types";
 import { clsx } from "clsx";
 
 // ─── Static fallback benchmarks ───────────────────────────────────────────────
@@ -271,12 +271,14 @@ function MarketDetailCard({
   assignedProperties,
   highlightedClass,
   showHistorical,
+  benchmarkId,
 }: {
   benchmark: CoStarBenchmark;
   currency: string;
   assignedProperties: { id: string; propertyName: string; propertyType: string; currentADR: number; currentOccupancy: number }[];
   highlightedClass: keyof CoStarBenchmark["byClass"] | null;
   showHistorical: boolean;
+  benchmarkId: string;
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-navy-800/30 p-5 space-y-4">
@@ -375,6 +377,281 @@ function MarketDetailCard({
 
       {/* Historical charts */}
       {showHistorical && <HistoricalCharts benchmark={benchmark} currency={currency} />}
+
+      {/* Duetto client hotels — one section per market */}
+      <DuettoClientHotelsSection
+        benchmarkId={benchmarkId}
+        marketName={benchmark.marketName}
+        currency={currency}
+      />
+    </div>
+  );
+}
+
+// ─── Duetto Client Hotels in Market ──────────────────────────────────────────
+
+function pctChange(current: number, prior: number): number | null {
+  if (!prior) return null;
+  return ((current - prior) / prior) * 100;
+}
+
+function PctBadge({ value }: { value: number | null }) {
+  if (value === null) return <span className="text-white/20 text-xs font-sans">—</span>;
+  return (
+    <span className={clsx("text-xs font-sans font-semibold", value >= 0 ? "text-emerald-brand" : "text-[#FF5900]")}>
+      {value >= 0 ? "+" : ""}{value.toFixed(1)}%
+    </span>
+  );
+}
+
+function HotelInputCard({
+  hotel,
+  index,
+  currency,
+  onUpdate,
+}: {
+  hotel: DuettoMarketHotel;
+  index: number;
+  currency: string;
+  onUpdate: (updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
+}) {
+  const currSymbol = (
+    { USD: "$", EUR: "€", GBP: "£", MXN: "$", CAD: "$", AUD: "$", JPY: "¥" } as Record<string, string>
+  )[currency] ?? "$";
+
+  function NumInput({
+    value,
+    field,
+    isInteger = false,
+  }: {
+    value: number;
+    field: keyof Omit<DuettoMarketHotel, "id" | "name">;
+    isInteger?: boolean;
+  }) {
+    return (
+      <input
+        type="number"
+        min={0}
+        step={isInteger ? 1 : 0.01}
+        value={value || ""}
+        onChange={(e) => onUpdate({ [field]: parseFloat(e.target.value) || 0 })}
+        className="w-full bg-navy-900/60 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs font-sans text-right focus:border-gold-500/50 focus:outline-none focus:ring-1 focus:ring-gold-500/20 transition-all placeholder:text-white/20"
+        placeholder="0"
+      />
+    );
+  }
+
+  const rnPct   = pctChange(hotel.currentRoomNights,   hotel.priorRoomNights);
+  const adrPct  = pctChange(hotel.currentADR,          hotel.priorADR);
+  const rvrPct  = pctChange(hotel.currentRevPAR,       hotel.priorRevPAR);
+  const revPct  = pctChange(hotel.currentRoomRevenue,  hotel.priorRoomRevenue);
+
+  return (
+    <div className="p-4 rounded-xl border border-white/8 bg-navy-900/40 mb-3 last:mb-0">
+      {/* Hotel label row */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-white/30 text-[10px] font-sans uppercase tracking-wider font-semibold flex-shrink-0">
+          Hotel {index + 1}
+        </span>
+        <input
+          type="text"
+          value={hotel.name}
+          onChange={(e) => onUpdate({ name: e.target.value })}
+          placeholder="Optional label"
+          className="flex-1 bg-transparent border-b border-white/10 text-white/60 text-xs font-sans px-1 py-0.5 focus:border-gold-500/30 focus:outline-none placeholder:text-white/15 transition-colors min-w-0"
+        />
+      </div>
+
+      {/* Metrics table */}
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full text-xs font-sans min-w-[480px]">
+          <thead>
+            <tr className="text-white/25 text-[10px] uppercase tracking-wider">
+              <th className="text-left py-1.5 pr-3 w-16" />
+              <th className="text-right py-1.5 px-2">Room Nights</th>
+              <th className="text-right py-1.5 px-2">ADR ({currSymbol})</th>
+              <th className="text-right py-1.5 px-2">RevPAR ({currSymbol})</th>
+              <th className="text-right py-1.5 pl-2">Room Revenue ({currSymbol})</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t border-white/5">
+              <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Current</td>
+              <td className="py-1.5 px-2"><NumInput value={hotel.currentRoomNights}  field="currentRoomNights"  isInteger /></td>
+              <td className="py-1.5 px-2"><NumInput value={hotel.currentADR}         field="currentADR" /></td>
+              <td className="py-1.5 px-2"><NumInput value={hotel.currentRevPAR}      field="currentRevPAR" /></td>
+              <td className="py-1.5 pl-2"><NumInput value={hotel.currentRoomRevenue} field="currentRoomRevenue" isInteger /></td>
+            </tr>
+            <tr className="border-t border-white/5">
+              <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Prior</td>
+              <td className="py-1.5 px-2"><NumInput value={hotel.priorRoomNights}    field="priorRoomNights"  isInteger /></td>
+              <td className="py-1.5 px-2"><NumInput value={hotel.priorADR}           field="priorADR" /></td>
+              <td className="py-1.5 px-2"><NumInput value={hotel.priorRevPAR}        field="priorRevPAR" /></td>
+              <td className="py-1.5 pl-2"><NumInput value={hotel.priorRoomRevenue}   field="priorRoomRevenue" isInteger /></td>
+            </tr>
+            <tr className="border-t border-white/12">
+              <td className="py-1.5 pr-3 text-white/25 text-[10px] uppercase tracking-wider whitespace-nowrap">YoY</td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={rnPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={adrPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={rvrPct} /></td>
+              <td className="py-1.5 pl-2 text-right"><PctBadge value={revPct} /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AggregateCard({
+  hotels,
+  currency,
+}: {
+  hotels: DuettoMarketHotel[];
+  currency: string;
+}) {
+  // Weighted aggregation
+  const totalCurrentRN  = hotels.reduce((s, h) => s + h.currentRoomNights,  0);
+  const totalPriorRN    = hotels.reduce((s, h) => s + h.priorRoomNights,    0);
+  const totalCurrentRev = hotels.reduce((s, h) => s + h.currentRoomRevenue, 0);
+  const totalPriorRev   = hotels.reduce((s, h) => s + h.priorRoomRevenue,   0);
+
+  // Available room nights = Revenue / RevPAR (per hotel, then summed)
+  const totalCurrentAvailRN = hotels.reduce(
+    (s, h) => s + (h.currentRevPAR > 0 ? h.currentRoomRevenue / h.currentRevPAR : 0), 0
+  );
+  const totalPriorAvailRN = hotels.reduce(
+    (s, h) => s + (h.priorRevPAR > 0 ? h.priorRoomRevenue / h.priorRevPAR : 0), 0
+  );
+
+  const currentADR    = totalCurrentRN    > 0 ? totalCurrentRev / totalCurrentRN    : 0;
+  const priorADR      = totalPriorRN      > 0 ? totalPriorRev   / totalPriorRN      : 0;
+  const currentRevPAR = totalCurrentAvailRN > 0 ? totalCurrentRev / totalCurrentAvailRN : 0;
+  const priorRevPAR   = totalPriorAvailRN   > 0 ? totalPriorRev   / totalPriorAvailRN   : 0;
+
+  const metrics = [
+    {
+      label: "Room Nights",
+      current: totalCurrentRN.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      prior:   totalPriorRN.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      pct: pctChange(totalCurrentRN, totalPriorRN),
+    },
+    {
+      label: "Wtd. ADR",
+      current: formatCurrency(currentADR, currency),
+      prior:   formatCurrency(priorADR, currency),
+      pct: pctChange(currentADR, priorADR),
+    },
+    {
+      label: "Wtd. RevPAR",
+      current: formatCurrency(currentRevPAR, currency),
+      prior:   formatCurrency(priorRevPAR, currency),
+      pct: pctChange(currentRevPAR, priorRevPAR),
+    },
+    {
+      label: "Room Revenue",
+      current: formatCurrency(totalCurrentRev, currency, true),
+      prior:   formatCurrency(totalPriorRev, currency, true),
+      pct: pctChange(totalCurrentRev, totalPriorRev),
+    },
+  ];
+
+  return (
+    <div className="mt-3 p-4 rounded-xl border border-gold-500/20 bg-gold-500/5">
+      <p className="text-gold-400 text-[10px] font-sans uppercase tracking-wider font-semibold mb-3">
+        Market Portfolio — {hotels.length} Duetto Hotels Combined
+      </p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {metrics.map(({ label, current, prior, pct: p }) => (
+          <div key={label} className="text-center p-3 rounded-lg bg-navy-800/40">
+            <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1.5">{label}</p>
+            <div className="mb-1"><PctBadge value={p} /></div>
+            <p className="text-white font-serif font-bold text-sm leading-tight">{current}</p>
+            <p className="text-white/25 text-[10px] font-sans mt-0.5">vs. {prior}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DuettoClientHotelsSection({
+  benchmarkId,
+  marketName,
+  currency,
+}: {
+  benchmarkId: string;
+  marketName: string;
+  currency: string;
+}) {
+  const { duettoMarketData, setDuettoHotelCount, updateDuettoHotel } = useCalculatorStore();
+  const marketData = duettoMarketData.find((d) => d.costarBenchmarkId === benchmarkId);
+  const hotels = marketData?.hotels ?? [];
+  const hotelCount = hotels.length;
+
+  const hasAnyData = hotels.some(
+    (h) => h.currentRoomNights > 0 || h.priorRoomNights > 0 || h.currentADR > 0
+  );
+
+  return (
+    <div className="mt-5 pt-5 border-t border-white/8">
+      {/* Section header + counter */}
+      <div className="flex items-start justify-between mb-4 gap-4">
+        <div>
+          <p className="text-white/50 text-xs font-sans font-semibold">
+            Duetto Client Hotels in {marketName}
+          </p>
+          <p className="text-white/25 text-[10px] font-sans mt-0.5">
+            12-month production data from same-market Duetto hotels
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-white/30 text-[10px] font-sans">Hotels:</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setDuettoHotelCount(benchmarkId, Math.max(0, hotelCount - 1))}
+              disabled={hotelCount === 0}
+              className="w-6 h-6 rounded-md bg-white/8 border border-white/10 text-white/50 hover:text-white hover:bg-white/12 transition-all font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+              aria-label="Remove hotel"
+            >
+              −
+            </button>
+            <span className="w-6 text-center text-white font-sans font-semibold text-sm tabular-nums">
+              {hotelCount}
+            </span>
+            <button
+              onClick={() => setDuettoHotelCount(benchmarkId, Math.min(20, hotelCount + 1))}
+              className="w-6 h-6 rounded-md bg-white/8 border border-white/10 text-white/50 hover:text-white hover:bg-white/12 transition-all font-bold text-sm flex items-center justify-center"
+              aria-label="Add hotel"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty state */}
+      {hotelCount === 0 && (
+        <p className="text-white/20 text-xs font-sans text-center py-3 italic">
+          Use + to add Duetto client hotels from this market and benchmark real production growth
+        </p>
+      )}
+
+      {/* Hotel input cards */}
+      {hotels.map((hotel, idx) => (
+        <HotelInputCard
+          key={hotel.id}
+          hotel={hotel}
+          index={idx}
+          currency={currency}
+          onUpdate={(updates) => updateDuettoHotel(benchmarkId, hotel.id, updates)}
+        />
+      ))}
+
+      {/* Aggregate summary — only when 2+ hotels have data */}
+      {hotelCount >= 2 && hasAnyData && (
+        <AggregateCard hotels={hotels} currency={currency} />
+      )}
     </div>
   );
 }
@@ -548,6 +825,7 @@ export function Tab4Market() {
                   assignedProperties={assigned}
                   highlightedClass={dominantClass}
                   showHistorical={true}
+                  benchmarkId={b.id}
                 />
               );
             })}
@@ -672,6 +950,15 @@ export function Tab4Market() {
                   </table>
                 </div>
               </div>
+            )}
+
+            {/* Duetto client hotels — single-mode (tied to primary benchmark) */}
+            {primaryBenchmark && (
+              <DuettoClientHotelsSection
+                benchmarkId={primaryBenchmark.id}
+                marketName={primaryBenchmark.marketName}
+                currency={currency}
+              />
             )}
           </>
         )}

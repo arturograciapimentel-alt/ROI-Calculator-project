@@ -4,6 +4,8 @@ import { persist } from "zustand/middleware";
 import type {
   CalculatorState,
   CoStarBenchmark,
+  DuettoMarketData,
+  DuettoMarketHotel,
   PortfolioProperty,
   PropertyInputs,
   Scenario,
@@ -38,6 +40,8 @@ type CalculatorStore = CalculatorState & {
   removeCostarBenchmark: (id: string) => void;
   setPortfolioProperties: (props: PortfolioProperty[]) => void;
   updatePortfolioProperty: (id: string, updates: Partial<Omit<PortfolioProperty, "id">>) => void;
+  setDuettoHotelCount: (benchmarkId: string, count: number) => void;
+  updateDuettoHotel: (benchmarkId: string, hotelId: string, updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
 };
 
 const DEFAULT_INPUTS: PropertyInputs = {
@@ -63,6 +67,21 @@ const DEFAULT_INPUTS: PropertyInputs = {
   annualRMLaborCost: 100000,
   duettoAnnualCost: 0,
 };
+
+function createBlankHotel(benchmarkId: string, index: number): DuettoMarketHotel {
+  return {
+    id: `dh-${benchmarkId}-${Date.now()}-${index}`,
+    name: "",
+    currentRoomNights: 0,
+    currentADR: 0,
+    currentRevPAR: 0,
+    currentRoomRevenue: 0,
+    priorRoomNights: 0,
+    priorADR: 0,
+    priorRevPAR: 0,
+    priorRoomRevenue: 0,
+  };
+}
 
 function recalculate(
   inputs: PropertyInputs,
@@ -120,6 +139,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       hourlyLaborRate: 50,
       preparedBy: "",
       costarBenchmarks: [],
+      duettoMarketData: [],
       nextSteps:
         "• Schedule a 60-minute technical demo with the Duetto implementation team\n• Review integration requirements with your PMS vendor\n• Connect with references from similar properties in your market",
 
@@ -286,7 +306,43 @@ export const useCalculatorStore = create<CalculatorStore>()(
         const portfolioProperties = state.portfolioProperties.map((p) =>
           p.marketReportId === id ? { ...p, marketReportId: null } : p
         );
-        set({ costarBenchmarks, portfolioProperties });
+        // Remove associated Duetto market data
+        const duettoMarketData = state.duettoMarketData.filter((d) => d.costarBenchmarkId !== id);
+        set({ costarBenchmarks, portfolioProperties, duettoMarketData });
+      },
+
+      setDuettoHotelCount: (benchmarkId, count) => {
+        const state = get();
+        const existing = state.duettoMarketData.find((d) => d.costarBenchmarkId === benchmarkId);
+        const currentHotels = existing?.hotels ?? [];
+        let hotels: DuettoMarketHotel[];
+        if (count <= 0) {
+          hotels = [];
+        } else if (count > currentHotels.length) {
+          const added = Array.from({ length: count - currentHotels.length }, (_, i) =>
+            createBlankHotel(benchmarkId, currentHotels.length + i)
+          );
+          hotels = [...currentHotels, ...added];
+        } else {
+          hotels = currentHotels.slice(0, count);
+        }
+        const entry: DuettoMarketData = { costarBenchmarkId: benchmarkId, hotels };
+        const duettoMarketData = existing
+          ? state.duettoMarketData.map((d) => (d.costarBenchmarkId === benchmarkId ? entry : d))
+          : [...state.duettoMarketData, entry];
+        set({ duettoMarketData });
+      },
+
+      updateDuettoHotel: (benchmarkId, hotelId, updates) => {
+        const state = get();
+        const duettoMarketData = state.duettoMarketData.map((d) => {
+          if (d.costarBenchmarkId !== benchmarkId) return d;
+          return {
+            ...d,
+            hotels: d.hotels.map((h) => (h.id === hotelId ? { ...h, ...updates } : h)),
+          };
+        });
+        set({ duettoMarketData });
       },
     }),
     {
@@ -300,6 +356,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
         hourlyLaborRate: state.hourlyLaborRate,
         preparedBy: state.preparedBy,
         nextSteps: state.nextSteps,
+        duettoMarketData: state.duettoMarketData,
       }),
     }
   )

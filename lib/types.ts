@@ -143,6 +143,28 @@ export interface CoStarBenchmark {
   historical: CoStarHistoricalRow[];
 }
 
+// One Duetto-client hotel entry in a market (12-month production data)
+export interface DuettoMarketHotel {
+  id: string;
+  name: string; // optional label for reference
+  // Current 12 months
+  currentRoomNights: number;
+  currentADR: number;
+  currentRevPAR: number;
+  currentRoomRevenue: number;
+  // Prior 12 months
+  priorRoomNights: number;
+  priorADR: number;
+  priorRevPAR: number;
+  priorRoomRevenue: number;
+}
+
+// All Duetto-client hotel data tied to a CoStar market
+export interface DuettoMarketData {
+  costarBenchmarkId: string;
+  hotels: DuettoMarketHotel[];
+}
+
 export interface CalculatorState {
   activeTab: number;
   inputs: PropertyInputs;
@@ -164,4 +186,5 @@ export interface CalculatorState {
   preparedBy: string;
   nextSteps: string;
   costarBenchmarks: CoStarBenchmark[];
+  duettoMarketData: DuettoMarketData[];
 }
