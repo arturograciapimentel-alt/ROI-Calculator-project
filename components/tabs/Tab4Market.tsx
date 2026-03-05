@@ -508,7 +508,7 @@ function HotelInputCard({
               <th className="text-right py-1.5 px-2">Room Nights</th>
               <th className="text-right py-1.5 px-2">ADR ({currSymbol})</th>
               <th className="text-right py-1.5 px-2">RevPAR ({currSymbol})</th>
-              <th className="text-right py-1.5 px-2 text-white/15 italic">Room Rev. ({currSymbol})</th>
+              <th className="text-right py-1.5 px-2 text-white/15 italic">Room Revenue ({currSymbol})</th>
               <th className="text-right py-1.5 px-2 text-white/15 italic">Occupancy</th>
               <th className="text-right py-1.5 pl-2 text-white/15 italic">Avail. Rooms</th>
             </tr>
@@ -519,8 +519,8 @@ function HotelInputCard({
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomNights} field="currentRoomNights" isInteger onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentADR}        field="currentADR"        isInteger={false} onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}     field="currentRevPAR"     isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{currentRoomRevenue > 0 ? formatCurrency(currentRoomRevenue, currency, true) : "—"}</div></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{currentRoomRevenue > 0 ? formatCurrency(currentRoomRevenue, currency) : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(2)}%` : "—"}</div></td>
               <td className="py-1.5 pl-2"><div className={derivedCell}>{currentAvailableRooms > 0 ? Math.round(currentAvailableRooms).toLocaleString() : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/5">
@@ -528,8 +528,8 @@ function HotelInputCard({
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomNights}   field="priorRoomNights"   isInteger onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorADR}          field="priorADR"          isInteger={false} onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}       field="priorRevPAR"       isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{priorRoomRevenue > 0 ? formatCurrency(priorRoomRevenue, currency, true) : "—"}</div></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{priorOccupancy > 0 ? `${(priorOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{priorRoomRevenue > 0 ? formatCurrency(priorRoomRevenue, currency) : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{priorOccupancy > 0 ? `${(priorOccupancy * 100).toFixed(2)}%` : "—"}</div></td>
               <td className="py-1.5 pl-2"><div className={derivedCell}>{priorAvailableRooms > 0 ? Math.round(priorAvailableRooms).toLocaleString() : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/12">
@@ -606,8 +606,8 @@ function AggregateCard({
     },
     {
       label: "Occupancy",
-      current: currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—",
-      prior:   priorOccupancy   > 0 ? `${(priorOccupancy   * 100).toFixed(1)}%` : "—",
+      current: currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(2)}%` : "—",
+      prior:   priorOccupancy   > 0 ? `${(priorOccupancy   * 100).toFixed(2)}%` : "—",
       pct: pctChange(currentOccupancy, priorOccupancy),
     },
     {
