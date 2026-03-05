@@ -600,8 +600,8 @@ function AggregateCard({
     },
     {
       label: "Room Revenue",
-      current: formatCurrency(totalCurrentRev, currency, true),
-      prior:   formatCurrency(totalPriorRev, currency, true),
+      current: formatCurrency(totalCurrentRev, currency),
+      prior:   formatCurrency(totalPriorRev, currency),
       pct: pctChange(totalCurrentRev, totalPriorRev),
     },
     {
