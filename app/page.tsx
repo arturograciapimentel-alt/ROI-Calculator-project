@@ -46,9 +46,9 @@ function LiveROIBadge() {
 
 const TABS = [
   Tab1PropertyProfile,
+  Tab4Market,
   Tab2ROIProjection,
   Tab3FiveYear,
-  Tab4Market,
   Tab5Executive,
 ];
 

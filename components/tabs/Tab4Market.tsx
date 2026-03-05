@@ -116,12 +116,88 @@ function HistoricalCharts({ benchmark, currency }: { benchmark: CoStarBenchmark;
       isForecast: r.isForecast,
     }));
   if (data.length === 0) return null;
+
+  // Compute YoY from the two most recent non-forecast rows
+  const actual = benchmark.historical.filter((r) => !r.isForecast).sort((a, b) => b.year - a.year);
+  const yoyData = actual.length >= 2 ? {
+    prior: actual[1],
+    current: actual[0],
+    occDelta: actual[0].occupancy - actual[1].occupancy,
+    adrPct: ((actual[0].adr - actual[1].adr) / actual[1].adr) * 100,
+    revparPct: ((actual[0].revpar - actual[1].revpar) / actual[1].revpar) * 100,
+  } : null;
+
   const tooltipStyle = { background: "#0E2124", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 };
   return (
     <div className="mt-5 pt-5 border-t border-white/8">
       <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-4">
         {benchmark.marketName} — Historical &amp; Forecast Performance
       </p>
+
+      {/* YoY comparison strip */}
+      {yoyData && (
+        <div className="mb-5 p-3 rounded-xl bg-navy-800/40 border border-white/8">
+          <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-3">
+            Year-over-Year — {yoyData.prior.year} → {yoyData.current.year}
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {/* Occupancy */}
+            <div className="text-center">
+              <p className="text-white/25 text-[10px] font-sans mb-1">Occupancy</p>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <p className="text-white font-serif font-bold text-base">
+                  {Math.round(yoyData.current.occupancy * 100)}%
+                </p>
+                <span className={clsx(
+                  "text-[11px] font-sans font-semibold",
+                  yoyData.occDelta >= 0 ? "text-emerald-brand" : "text-[#FF5900]"
+                )}>
+                  {yoyData.occDelta >= 0 ? "+" : ""}{(yoyData.occDelta * 100).toFixed(1)}pp
+                </span>
+              </div>
+              <p className="text-white/20 text-[10px] font-sans">
+                vs. {Math.round(yoyData.prior.occupancy * 100)}%
+              </p>
+            </div>
+            {/* ADR */}
+            <div className="text-center">
+              <p className="text-white/25 text-[10px] font-sans mb-1">ADR</p>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <p className="text-white font-serif font-bold text-base">
+                  {formatCurrency(yoyData.current.adr, currency)}
+                </p>
+                <span className={clsx(
+                  "text-[11px] font-sans font-semibold",
+                  yoyData.adrPct >= 0 ? "text-emerald-brand" : "text-[#FF5900]"
+                )}>
+                  {yoyData.adrPct >= 0 ? "+" : ""}{yoyData.adrPct.toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-white/20 text-[10px] font-sans">
+                vs. {formatCurrency(yoyData.prior.adr, currency)}
+              </p>
+            </div>
+            {/* RevPAR */}
+            <div className="text-center">
+              <p className="text-white/25 text-[10px] font-sans mb-1">RevPAR</p>
+              <div className="flex items-baseline justify-center gap-1.5">
+                <p className="text-white font-serif font-bold text-base">
+                  {formatCurrency(yoyData.current.revpar, currency)}
+                </p>
+                <span className={clsx(
+                  "text-[11px] font-sans font-semibold",
+                  yoyData.revparPct >= 0 ? "text-emerald-brand" : "text-[#FF5900]"
+                )}>
+                  {yoyData.revparPct >= 0 ? "+" : ""}{yoyData.revparPct.toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-white/20 text-[10px] font-sans">
+                vs. {formatCurrency(yoyData.prior.revpar, currency)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-6">
         <div>
           <p className="text-white/30 text-[10px] font-sans mb-2">RevPAR ($/room)</p>
