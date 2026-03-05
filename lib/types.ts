@@ -147,19 +147,19 @@ export interface CoStarBenchmark {
 }
 
 // One Duetto-client hotel entry in a market (12-month production data)
-// Manual inputs: roomNights, revPAR, availableRooms
-// Derived (not stored): ADR = roomRevenue / roomNights, roomRevenue = revPAR × availableRooms, occupancy = roomNights / availableRooms
+// Manual inputs: roomNights, revPAR, roomRevenue
+// Derived (not stored): availableRooms = roomRevenue / revPAR, ADR = roomRevenue / roomNights, occupancy = roomNights / availableRooms
 export interface DuettoMarketHotel {
   id: string;
   name: string; // optional label for reference
   // Current 12 months — manual inputs
   currentRoomNights: number;
   currentRevPAR: number;
-  currentAvailableRooms: number;
+  currentRoomRevenue: number;
   // Prior 12 months — manual inputs
   priorRoomNights: number;
   priorRevPAR: number;
-  priorAvailableRooms: number;
+  priorRoomRevenue: number;
 }
 
 // All Duetto-client hotel data tied to a CoStar market

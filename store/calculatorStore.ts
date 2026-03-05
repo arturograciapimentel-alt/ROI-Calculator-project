@@ -79,10 +79,10 @@ function createBlankHotel(benchmarkId: string, index: number): DuettoMarketHotel
     name: "",
     currentRoomNights: 0,
     currentRevPAR: 0,
-    currentAvailableRooms: 0,
+    currentRoomRevenue: 0,
     priorRoomNights: 0,
     priorRevPAR: 0,
-    priorAvailableRooms: 0,
+    priorRoomRevenue: 0,
   };
 }
 

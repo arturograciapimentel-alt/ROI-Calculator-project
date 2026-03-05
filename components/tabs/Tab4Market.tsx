@@ -412,7 +412,7 @@ function HotelNumInput({
   onUpdate,
 }: {
   storeValue: number;
-  field: "currentRoomNights" | "currentRevPAR" | "currentAvailableRooms" | "priorRoomNights" | "priorRevPAR" | "priorAvailableRooms";
+  field: "currentRoomNights" | "currentRevPAR" | "currentRoomRevenue" | "priorRoomNights" | "priorRevPAR" | "priorRoomRevenue";
   isInteger: boolean;
   onUpdate: (updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
 }) {
@@ -458,21 +458,21 @@ function HotelInputCard({
   )[currency] ?? "$";
 
   // Derived values — current period
-  const currentRoomRevenue = hotel.currentRevPAR * hotel.currentAvailableRooms;
-  const currentADR         = hotel.currentRoomNights > 0 ? currentRoomRevenue / hotel.currentRoomNights : 0;
-  const currentOccupancy   = hotel.currentAvailableRooms > 0 ? hotel.currentRoomNights / hotel.currentAvailableRooms : 0;
+  const currentAvailableRooms = hotel.currentRevPAR > 0 ? hotel.currentRoomRevenue / hotel.currentRevPAR : 0;
+  const currentADR            = hotel.currentRoomNights > 0 ? hotel.currentRoomRevenue / hotel.currentRoomNights : 0;
+  const currentOccupancy      = currentAvailableRooms > 0 ? hotel.currentRoomNights / currentAvailableRooms : 0;
 
   // Derived values — prior period
-  const priorRoomRevenue = hotel.priorRevPAR * hotel.priorAvailableRooms;
-  const priorADR         = hotel.priorRoomNights > 0 ? priorRoomRevenue / hotel.priorRoomNights : 0;
-  const priorOccupancy   = hotel.priorAvailableRooms > 0 ? hotel.priorRoomNights / hotel.priorAvailableRooms : 0;
+  const priorAvailableRooms = hotel.priorRevPAR > 0 ? hotel.priorRoomRevenue / hotel.priorRevPAR : 0;
+  const priorADR            = hotel.priorRoomNights > 0 ? hotel.priorRoomRevenue / hotel.priorRoomNights : 0;
+  const priorOccupancy      = priorAvailableRooms > 0 ? hotel.priorRoomNights / priorAvailableRooms : 0;
 
-  const rnPct    = pctChange(hotel.currentRoomNights,    hotel.priorRoomNights);
-  const availPct = pctChange(hotel.currentAvailableRooms, hotel.priorAvailableRooms);
-  const rvrPct   = pctChange(hotel.currentRevPAR,        hotel.priorRevPAR);
-  const adrPct   = pctChange(currentADR,                 priorADR);
-  const revPct   = pctChange(currentRoomRevenue,         priorRoomRevenue);
-  const occPct   = pctChange(currentOccupancy,           priorOccupancy);
+  const rnPct    = pctChange(hotel.currentRoomNights,   hotel.priorRoomNights);
+  const rvrPct   = pctChange(hotel.currentRevPAR,       hotel.priorRevPAR);
+  const revPct   = pctChange(hotel.currentRoomRevenue,  hotel.priorRoomRevenue);
+  const adrPct   = pctChange(currentADR,                priorADR);
+  const availPct = pctChange(currentAvailableRooms,     priorAvailableRooms);
+  const occPct   = pctChange(currentOccupancy,          priorOccupancy);
 
   // Shared read-only cell style
   const derivedCell = "w-full bg-navy-900/30 border border-white/5 rounded-lg px-2 py-1.5 text-white/40 text-xs font-sans text-right italic tabular-nums";
@@ -507,38 +507,38 @@ function HotelInputCard({
               <th className="text-left py-1.5 pr-3 w-16" />
               <th className="text-right py-1.5 px-2">Room Nights</th>
               <th className="text-right py-1.5 px-2">RevPAR ({currSymbol})</th>
-              <th className="text-right py-1.5 px-2">Avail. Rooms</th>
+              <th className="text-right py-1.5 px-2">Room Rev. ({currSymbol})</th>
               <th className="text-right py-1.5 px-2 text-white/15 italic">ADR ({currSymbol})</th>
-              <th className="text-right py-1.5 px-2 text-white/15 italic">Room Rev. ({currSymbol})</th>
+              <th className="text-right py-1.5 px-2 text-white/15 italic">Avail. Rooms</th>
               <th className="text-right py-1.5 pl-2 text-white/15 italic">Occupancy</th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Current</td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomNights}     field="currentRoomNights"     isInteger onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}          field="currentRevPAR"          isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentAvailableRooms}  field="currentAvailableRooms"  isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomNights}    field="currentRoomNights"    isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}         field="currentRevPAR"         isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomRevenue}    field="currentRoomRevenue"    isInteger onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><div className={derivedCell}>{currentADR > 0 ? `${currSymbol}${currentADR.toFixed(2)}` : "—"}</div></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{currentRoomRevenue > 0 ? formatCurrency(currentRoomRevenue, currency, true) : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{currentAvailableRooms > 0 ? Math.round(currentAvailableRooms).toLocaleString() : "—"}</div></td>
               <td className="py-1.5 pl-2"><div className={derivedCell}>{currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Prior</td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomNights}        field="priorRoomNights"        isInteger onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}            field="priorRevPAR"            isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorAvailableRooms}    field="priorAvailableRooms"    isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomNights}       field="priorRoomNights"       isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}           field="priorRevPAR"           isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomRevenue}      field="priorRoomRevenue"      isInteger onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><div className={derivedCell}>{priorADR > 0 ? `${currSymbol}${priorADR.toFixed(2)}` : "—"}</div></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{priorRoomRevenue > 0 ? formatCurrency(priorRoomRevenue, currency, true) : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{priorAvailableRooms > 0 ? Math.round(priorAvailableRooms).toLocaleString() : "—"}</div></td>
               <td className="py-1.5 pl-2"><div className={derivedCell}>{priorOccupancy > 0 ? `${(priorOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/12">
               <td className="py-1.5 pr-3 text-white/25 text-[10px] uppercase tracking-wider whitespace-nowrap">YoY</td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={rnPct} /></td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={rvrPct} /></td>
-              <td className="py-1.5 px-2 text-right"><PctBadge value={availPct} /></td>
-              <td className="py-1.5 px-2 text-right"><PctBadge value={adrPct} /></td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={revPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={adrPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={availPct} /></td>
               <td className="py-1.5 pl-2 text-right"><PctBadge value={occPct} /></td>
             </tr>
           </tbody>
