@@ -7,6 +7,7 @@ import {
   formatCurrency,
   formatPercent,
   estimateDuettoCost,
+  computeDuettoAnnualCost,
   aggregatePortfolioInputs,
   PROPERTY_TYPE_LABELS,
   RM_APPROACH_LABELS,
@@ -29,7 +30,7 @@ export function Tab5Executive() {
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
   const proj = projections.moderate;
   const conservProj = projections.conservative;
-  const effectiveCost = effectiveInputs.duettoAnnualCost || estimateDuettoCost(effectiveInputs.totalRooms);
+  const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
   const currentRevPAR = effectiveInputs.currentADR * effectiveInputs.currentOccupancy;
   const annualRevenue = currentRevPAR * effectiveInputs.totalRooms * 365;
   const totalFiveYearNet = yearlyProjections.reduce((s, y) => s + y.netBenefit, 0);

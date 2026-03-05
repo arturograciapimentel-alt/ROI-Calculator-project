@@ -114,7 +114,7 @@ function recalculate(
     hourlyLaborRate
   );
 
-  return { projections, yearlyProjections };
+  return { projections, yearlyProjections, duettoAnnualCost };
 }
 
 export const useCalculatorStore = create<CalculatorStore>()(
@@ -176,14 +176,18 @@ export const useCalculatorStore = create<CalculatorStore>()(
           }
         }
 
-        const { projections, yearlyProjections } = recalculate(
+        const { projections, yearlyProjections, duettoAnnualCost } = recalculate(
           inputs,
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
           portfolioProperties
         );
-        set({ inputs, portfolioProperties, projections, yearlyProjections });
+        // Keep inputs.duettoAnnualCost in sync with the derived value (single-property mode only)
+        const syncedInputs = portfolioProperties.length < 2
+          ? { ...inputs, duettoAnnualCost }
+          : inputs;
+        set({ inputs: syncedInputs, portfolioProperties, projections, yearlyProjections });
       },
 
       setScenario: (scenario) => set({ scenario }),
@@ -210,26 +214,26 @@ export const useCalculatorStore = create<CalculatorStore>()(
       loadSampleData: () => {
         const state = get();
         const inputs = { ...SAMPLE_PROPERTY };
-        const { projections, yearlyProjections } = recalculate(
+        const { projections, yearlyProjections, duettoAnnualCost } = recalculate(
           inputs,
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
           []
         );
-        set({ inputs, portfolioProperties: [], projections, yearlyProjections });
+        set({ inputs: { ...inputs, duettoAnnualCost }, portfolioProperties: [], projections, yearlyProjections });
       },
 
       resetInputs: () => {
         const state = get();
-        const { projections, yearlyProjections } = recalculate(
+        const { projections, yearlyProjections, duettoAnnualCost } = recalculate(
           DEFAULT_INPUTS,
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
           []
         );
-        set({ inputs: DEFAULT_INPUTS, portfolioProperties: [], projections, yearlyProjections });
+        set({ inputs: { ...DEFAULT_INPUTS, duettoAnnualCost }, portfolioProperties: [], projections, yearlyProjections });
       },
 
       setCapRate: (capRate) => {
