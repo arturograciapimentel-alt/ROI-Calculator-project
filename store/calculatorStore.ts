@@ -145,7 +145,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       costarBenchmarks: [],
       duettoMarketData: [],
       nextSteps:
-        "• Schedule a 60-minute technical demo with the Duetto implementation team\n• Review integration requirements with your PMS vendor\n• Connect with references from similar properties in your market",
+        "• Schedule internal approval meeting with GM, CFO, and revenue leadership\n• Define Year 1 KPIs and success metrics for the implementation\n• Confirm implementation timeline and required IT/PMS integration resources\n• Begin contract negotiation and commercial term discussions",
 
       setActiveTab: (tab) => set({ activeTab: tab }),
 
