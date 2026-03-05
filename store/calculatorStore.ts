@@ -66,6 +66,7 @@ const DEFAULT_INPUTS: PropertyInputs = {
   otaCommissionRate: 0.18,
   cpor: 45,
   annualRMSystemsCost: 0,
+  annualConsultingCost: 0,
   pmsName: "",
   subscriptionCost: 0,
   implementationFee: 0,

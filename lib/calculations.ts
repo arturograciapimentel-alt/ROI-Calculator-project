@@ -123,8 +123,8 @@ export function calculateROI(
   const hoursSavedPerWeek = Math.min(inputs.hoursPerWeekManual * 0.5, 20);
 
   // Systems cost savings: direct replacement of existing RM tools & services
-  // If the hotel pays for rate shoppers, pricing tools, or consulting, Duetto consolidates these
-  const systemsCostSavings = inputs.annualRMSystemsCost > 0 ? inputs.annualRMSystemsCost : 0;
+  // If the hotel pays for rate shoppers, pricing tools, consulting, or outsourced RM, Duetto consolidates these
+  const systemsCostSavings = (inputs.annualRMSystemsCost || 0) + (inputs.annualConsultingCost || 0);
 
   // Totals
   const totalIncrementalRevenue = annualIncrementalRoomRevenue; // group removed
@@ -276,6 +276,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   otaCommissionRate: 0.18,
   cpor: 45,
   annualRMSystemsCost: 25000, // e.g. rate shopper + pricing tool subscriptions
+  annualConsultingCost: 0,
   pmsName: "",
   subscriptionCost: 42000,
   implementationFee: 15000,
@@ -321,6 +322,7 @@ export function aggregatePortfolioInputs(
   const groupBusinessPercent = weightedAvg("groupBusinessPercent");
   const yieldablePercent = weightedAvg("yieldablePercent");
   const annualRMSystemsCost = portfolioProperties.reduce((s, p) => s + (p.annualRMSystemsCost || 0), 0);
+  const annualConsultingCost = portfolioProperties.reduce((s, p) => s + (p.annualConsultingCost || 0), 0);
   const duettoAnnualCost = portfolioProperties.reduce(
     (s, p) => s + (p.duettoAnnualCost > 0 ? p.duettoAnnualCost : estimateDuettoCost(p.totalRooms)),
     0
@@ -334,6 +336,7 @@ export function aggregatePortfolioInputs(
     groupBusinessPercent,
     yieldablePercent,
     annualRMSystemsCost,
+    annualConsultingCost,
     duettoAnnualCost,
     numberOfProperties: portfolioProperties.length,
   };
@@ -354,6 +357,7 @@ export function createPortfolioProperty(
     groupBusinessPercent: inputs.groupBusinessPercent,
     yieldablePercent: inputs.yieldablePercent,
     annualRMSystemsCost: inputs.annualRMSystemsCost,
+    annualConsultingCost: inputs.annualConsultingCost,
     duettoAnnualCost: inputs.duettoAnnualCost,
     marketReportId: null,
   };

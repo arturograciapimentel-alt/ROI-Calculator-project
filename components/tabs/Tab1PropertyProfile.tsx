@@ -14,7 +14,7 @@ function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
     inputs.currentADR > 0,
     inputs.currentOccupancy > 0,
     inputs.location,
-    inputs.annualRMSystemsCost > 0,
+    (inputs.annualRMSystemsCost || 0) + (inputs.annualConsultingCost || 0) > 0, // Either tech or consulting costs provided
     inputs.cpor > 0,
   ];
   const filled = fields.filter(Boolean).length;
@@ -151,13 +151,23 @@ function PortfolioPropertyCard({
           />
         </InputField>
 
-        <InputField label="Annual Pricing & RM Technology Costs" tooltip="Annual cost of rate shoppers, pricing tools, or outsourced RM consulting">
+        <InputField label="Annual Pricing & RM Technology Costs" tooltip="Annual cost of pricing tools, rate shoppers, and RM software (e.g., Opera Insight, Duetto, IDeaS)">
           <TextInput
             type="number"
             value={property.annualRMSystemsCost || ""}
             onChange={(e) => onUpdate({ annualRMSystemsCost: parseFloat(e.target.value) || 0 })}
             prefix={sym}
             placeholder="15000"
+          />
+        </InputField>
+
+        <InputField label="Annual Consulting / Outsourced RM Costs" tooltip="Annual cost of consulting services or fully outsourced revenue management (e.g., consulting firms, managed services)">
+          <TextInput
+            type="number"
+            value={property.annualConsultingCost || ""}
+            onChange={(e) => onUpdate({ annualConsultingCost: parseFloat(e.target.value) || 0 })}
+            prefix={sym}
+            placeholder="20000"
           />
         </InputField>
 
@@ -605,18 +615,33 @@ export function Tab1PropertyProfile() {
           </div>
 
           {!isPortfolioMode && (
-            <InputField
-              label={`Annual Pricing & RM Technology Costs — ${sym}`}
-              tooltip="Annual cost of existing RM tools & services (e.g. rate shoppers, pricing tools, outsourced RM consulting). If Duetto replaces these, this becomes direct cost savings."
-            >
-              <TextInput
-                type="number"
-                value={inputs.annualRMSystemsCost || ""}
-                onChange={(e) => update("annualRMSystemsCost", parseFloat(e.target.value) || 0)}
-                prefix={sym}
-                placeholder="15000"
-              />
-            </InputField>
+            <>
+              <InputField
+                label={`Annual Pricing & RM Technology Costs — ${sym}`}
+                tooltip="Annual cost of pricing tools, rate shoppers, and RM software (e.g., Opera Insight, Duetto, IDeaS). If Duetto replaces these, this becomes direct cost savings."
+              >
+                <TextInput
+                  type="number"
+                  value={inputs.annualRMSystemsCost || ""}
+                  onChange={(e) => update("annualRMSystemsCost", parseFloat(e.target.value) || 0)}
+                  prefix={sym}
+                  placeholder="15000"
+                />
+              </InputField>
+
+              <InputField
+                label={`Annual Consulting / Outsourced RM Costs — ${sym}`}
+                tooltip="Annual cost of consulting services or fully outsourced revenue management (e.g., consulting firms, managed services). If Duetto replaces these, this becomes direct cost savings."
+              >
+                <TextInput
+                  type="number"
+                  value={inputs.annualConsultingCost || ""}
+                  onChange={(e) => update("annualConsultingCost", parseFloat(e.target.value) || 0)}
+                  prefix={sym}
+                  placeholder="20000"
+                />
+              </InputField>
+            </>
           )}
         </div>
       </div>
