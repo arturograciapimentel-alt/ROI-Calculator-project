@@ -134,7 +134,7 @@ export function calculateROI(
   // ROI metrics
   const netROIPercent   = inputs.duettoAnnualCost > 0
     ? ((totalAnnualImpact - inputs.duettoAnnualCost) / inputs.duettoAnnualCost) * 100 : 0;
-  const paybackMonths   = totalAnnualImpact > 0
+  const paybackMonths   = inputs.duettoAnnualCost > 0 && totalAnnualImpact > 0
     ? inputs.duettoAnnualCost / (totalAnnualImpact / 12) : 0;
   const roiMultiple     = inputs.duettoAnnualCost > 0
     ? totalAnnualImpact / inputs.duettoAnnualCost : 0;
