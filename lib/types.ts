@@ -191,4 +191,5 @@ export interface CalculatorState {
   nextSteps: string;
   costarBenchmarks: CoStarBenchmark[];
   duettoMarketData: DuettoMarketData[];
+  marketSignalApplied: boolean;
 }

@@ -263,6 +263,149 @@ function MarketRow({
   );
 }
 
+// ─── Market signal helpers ────────────────────────────────────────────────────
+
+function computeDuettoSignal(hotels: DuettoMarketHotel[]): { currentRevPAR: number; priorRevPAR: number; yoyPct: number } | null {
+  if (!hotels.length) return null;
+  const totalCurrentRev   = hotels.reduce((s, h) => s + h.currentADR * h.currentRoomNights, 0);
+  const totalPriorRev     = hotels.reduce((s, h) => s + h.priorADR   * h.priorRoomNights,   0);
+  const totalCurrentAvail = hotels.reduce((s, h) => h.currentRevPAR > 0 ? s + (h.currentADR * h.currentRoomNights) / h.currentRevPAR : s, 0);
+  const totalPriorAvail   = hotels.reduce((s, h) => h.priorRevPAR   > 0 ? s + (h.priorADR   * h.priorRoomNights)   / h.priorRevPAR   : s, 0);
+  const currentRevPAR = totalCurrentAvail > 0 ? totalCurrentRev / totalCurrentAvail : 0;
+  const priorRevPAR   = totalPriorAvail   > 0 ? totalPriorRev   / totalPriorAvail   : 0;
+  if (!currentRevPAR || !priorRevPAR) return null;
+  return { currentRevPAR, priorRevPAR, yoyPct: ((currentRevPAR - priorRevPAR) / priorRevPAR) * 100 };
+}
+
+function computeCoStarYoY(benchmark: CoStarBenchmark): number | null {
+  const actual = benchmark.historical.filter(r => !r.isForecast).sort((a, b) => b.year - a.year);
+  if (actual.length < 2 || !actual[1].revpar) return null;
+  return ((actual[0].revpar - actual[1].revpar) / actual[1].revpar) * 100;
+}
+
+function signalToScenarios(yoyPct: number) {
+  return {
+    conservative: Math.max(2, Math.min(10, yoyPct * 0.5)) / 100,
+    moderate:     Math.max(4, Math.min(25, yoyPct))       / 100,
+    aggressive:   Math.max(8, Math.min(35, yoyPct * 1.5)) / 100,
+  };
+}
+
+function MarketSignalPanel({
+  signal,
+  costarYoY,
+  currency,
+}: {
+  signal: { currentRevPAR: number; priorRevPAR: number; yoyPct: number };
+  costarYoY: number | null;
+  currency: string;
+}) {
+  const { applyMarketSignal, marketSignalApplied } = useCalculatorStore();
+  const scenarios = signalToScenarios(signal.yoyPct);
+  const outperforms = costarYoY !== null && signal.yoyPct > costarYoY;
+  return (
+    <div className="mt-4 p-4 rounded-xl border border-[#7459EE]/30 bg-[#7459EE]/5">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-[#7459EE] text-xs font-sans font-semibold uppercase tracking-wider">
+              Market Signal
+            </p>
+            {outperforms && (
+              <span className="text-[9px] font-bold bg-emerald-brand/20 text-emerald-brand px-1.5 py-0.5 rounded-full uppercase">
+                Outperforms Market
+              </span>
+            )}
+          </div>
+          <p className="text-white/40 text-[10px] font-sans">
+            YoY RevPAR growth from Duetto client hotels in this market
+          </p>
+        </div>
+        {marketSignalApplied ? (
+          <span className="flex items-center gap-1 text-[10px] font-sans text-emerald-brand bg-emerald-brand/10 border border-emerald-brand/20 px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            Applied to scenarios
+          </span>
+        ) : (
+          <button
+            onClick={() => applyMarketSignal(scenarios.conservative, scenarios.moderate, scenarios.aggressive)}
+            className="flex items-center gap-1.5 text-[10px] font-sans font-semibold text-[#7459EE] bg-[#7459EE]/15 hover:bg-[#7459EE]/25 border border-[#7459EE]/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap flex-shrink-0"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Sync to Scenarios
+          </button>
+        )}
+      </div>
+
+      {/* Growth comparison */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="p-3 rounded-lg bg-navy-800/60 border border-emerald-brand/20 text-center">
+          <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1">
+            Duetto Hotels RevPAR Growth
+          </p>
+          <p className={clsx("text-2xl font-serif font-bold", signal.yoyPct >= 0 ? "text-emerald-brand" : "text-[#FF5900]")}>
+            {signal.yoyPct >= 0 ? "+" : ""}{signal.yoyPct.toFixed(1)}%
+          </p>
+          <p className="text-white/20 text-[10px] font-sans mt-0.5">
+            {formatCurrency(signal.priorRevPAR, currency)} → {formatCurrency(signal.currentRevPAR, currency)}
+          </p>
+        </div>
+        {costarYoY !== null ? (
+          <div className="p-3 rounded-lg bg-navy-800/60 border border-white/10 text-center">
+            <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1">
+              CoStar Market RevPAR Growth
+            </p>
+            <p className="text-2xl font-serif font-bold text-white/60">
+              {costarYoY >= 0 ? "+" : ""}{costarYoY.toFixed(1)}%
+            </p>
+            <p className="text-white/20 text-[10px] font-sans mt-0.5">YoY from market report</p>
+            {outperforms && (
+              <p className="text-emerald-brand text-[10px] font-sans font-semibold mt-1">
+                +{(signal.yoyPct - costarYoY).toFixed(1)}pp ahead of market
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="p-3 rounded-lg bg-navy-800/40 border border-white/5 text-center flex items-center justify-center">
+            <p className="text-white/20 text-[10px] font-sans italic">
+              Upload a CoStar report to compare vs. market
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Calibrated scenario preview */}
+      <div>
+        <p className="text-white/25 text-[10px] font-sans uppercase tracking-wider mb-2">
+          Calibrated RevPAR uplifts — click &ldquo;Sync&rdquo; to apply
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { label: "Conservative", value: scenarios.conservative, color: "#7459EE" },
+            { label: "Moderate",     value: scenarios.moderate,     color: "#68FFF2" },
+            { label: "Aggressive",   value: scenarios.aggressive,   color: "#C4FF45" },
+          ] as const).map(({ label, value, color }) => (
+            <div key={label} className="text-center p-2 rounded-lg bg-navy-800/40">
+              <p className="text-white/30 text-[9px] font-sans uppercase tracking-wider">{label}</p>
+              <p className="font-serif font-bold text-sm mt-0.5" style={{ color }}>
+                +{(value * 100).toFixed(1)}%
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="text-white/15 text-[10px] font-sans mt-2">
+          Conservative = 50% of signal · Moderate = signal · Aggressive = 150% of signal (capped)
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Per-market benchmark card (detail view) ─────────────────────────────────
 
 function MarketDetailCard({
@@ -383,6 +526,7 @@ function MarketDetailCard({
         benchmarkId={benchmarkId}
         marketName={benchmark.marketName}
         currency={currency}
+        costarYoY={computeCoStarYoY(benchmark)}
       />
     </div>
   );
@@ -641,10 +785,12 @@ function DuettoClientHotelsSection({
   benchmarkId,
   marketName,
   currency,
+  costarYoY = null,
 }: {
   benchmarkId: string;
   marketName: string;
   currency: string;
+  costarYoY?: number | null;
 }) {
   const { duettoMarketData, setDuettoHotelCount, updateDuettoHotel } = useCalculatorStore();
   const marketData = duettoMarketData.find((d) => d.costarBenchmarkId === benchmarkId);
@@ -654,6 +800,8 @@ function DuettoClientHotelsSection({
   const hasAnyData = hotels.some(
     (h) => h.currentRoomNights > 0 || h.currentADR > 0 || h.currentRevPAR > 0
   );
+
+  const signal = hasAnyData ? computeDuettoSignal(hotels) : null;
 
   return (
     <div className="mt-5 pt-5 border-t border-white/8">
@@ -713,6 +861,11 @@ function DuettoClientHotelsSection({
       {/* Aggregate summary — only when 2+ hotels have data */}
       {hotelCount >= 2 && hasAnyData && (
         <AggregateCard hotels={hotels} currency={currency} />
+      )}
+
+      {/* Market signal — shown when prior + current RevPAR data produces a valid YoY signal */}
+      {signal && (
+        <MarketSignalPanel signal={signal} costarYoY={costarYoY} currency={currency} />
       )}
     </div>
   );
@@ -1036,6 +1189,7 @@ export function Tab4Market() {
                 benchmarkId={primaryBenchmark.id}
                 marketName={primaryBenchmark.marketName}
                 currency={currency}
+                costarYoY={computeCoStarYoY(primaryBenchmark)}
               />
             )}
           </>

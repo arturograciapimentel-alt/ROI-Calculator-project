@@ -68,7 +68,7 @@ function ExplanationCard({ title, body, color = "gold" }: ExplanationCardProps) 
 }
 
 export function Tab2ROIProjection() {
-  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties } = useCalculatorStore();
+  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties, marketSignalApplied } = useCalculatorStore();
   const proj = projections[scenario];
   const currency = inputs.currency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
@@ -234,8 +234,19 @@ export function Tab2ROIProjection() {
         <p className="text-white/40 text-xs font-sans mb-6">
           Set the expected RevPAR uplift for this scenario. The model decomposes it: 60% attributed to ADR improvement (open pricing), 40% to occupancy (demand intelligence).
         </p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-white/60 text-xs font-sans uppercase tracking-wider">RevPAR Uplift</p>
+          {marketSignalApplied && (
+            <span className="flex items-center gap-1 text-[9px] font-bold bg-[#7459EE]/20 text-[#7459EE] px-1.5 py-0.5 rounded-full uppercase">
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Market Calibrated
+            </span>
+          )}
+        </div>
         <InputField
-          label="RevPAR Uplift"
+          label=""
           tooltip="Total RevPAR improvement from Duetto vs. current performance. Applied to yieldable inventory only. Decomposed internally: 60% from ADR (open pricing), 40% from occupancy (demand forecasting)."
         >
           <SliderInput

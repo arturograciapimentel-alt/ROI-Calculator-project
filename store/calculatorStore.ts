@@ -42,6 +42,7 @@ type CalculatorStore = CalculatorState & {
   updatePortfolioProperty: (id: string, updates: Partial<Omit<PortfolioProperty, "id">>) => void;
   setDuettoHotelCount: (benchmarkId: string, count: number) => void;
   updateDuettoHotel: (benchmarkId: string, hotelId: string, updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
+  applyMarketSignal: (conservative: number, moderate: number, aggressive: number) => void;
 };
 
 const DEFAULT_INPUTS: PropertyInputs = {
@@ -124,6 +125,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       inputs: DEFAULT_INPUTS,
       portfolioProperties: [],
       scenario: "moderate",
+      marketSignalApplied: false,
       assumptions: {
         conservative: { ...DEFAULT_ASSUMPTIONS.conservative },
         moderate: { ...DEFAULT_ASSUMPTIONS.moderate },
@@ -208,8 +210,26 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           state.portfolioProperties
         );
-        set({ assumptions, projections, yearlyProjections });
+        set({ assumptions, projections, yearlyProjections, marketSignalApplied: false });
       },
+
+      applyMarketSignal: (conservative, moderate, aggressive) => {
+        const state = get();
+        const assumptions = {
+          conservative: { ...state.assumptions.conservative, revparUpliftPercent: conservative },
+          moderate:     { ...state.assumptions.moderate,     revparUpliftPercent: moderate     },
+          aggressive:   { ...state.assumptions.aggressive,   revparUpliftPercent: aggressive   },
+        };
+        const { projections, yearlyProjections } = recalculate(
+          state.inputs,
+          assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          state.portfolioProperties
+        );
+        set({ assumptions, projections, yearlyProjections, marketSignalApplied: true });
+      },
+
 
       loadSampleData: () => {
         const state = get();
