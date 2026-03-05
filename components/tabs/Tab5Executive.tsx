@@ -46,7 +46,7 @@ export function Tab5Executive() {
   const pieData = [
     { name: "ADR Uplift", value: Math.max(proj.annualIncrementalRoomRevenue * (adrContrib / total), 0) },
     { name: "Occ. Uplift", value: Math.max(proj.annualIncrementalRoomRevenue * (occContrib / total) + proj.groupRevenue, 0) },
-    { name: "Labor Savings", value: Math.max(proj.laborSavings, 0) },
+    { name: "Systems Cost Savings", value: Math.max(proj.systemsCostSavings, 0) },
   ].filter((d) => d.value > 0);
 
   const handlePrint = () => {
@@ -298,7 +298,7 @@ export function Tab5Executive() {
                   {
                     label: "Annual Financial Impact",
                     value: formatCurrency(proj.totalAnnualImpact, currency, true),
-                    sub: "Revenue uplift + labor savings",
+                    sub: "Revenue uplift + systems cost savings",
                     variant: "gold",
                   },
                   {
@@ -433,10 +433,16 @@ export function Tab5Executive() {
                     <span className="text-white/50 text-sm font-sans">Annual Financial Impact (Mod.)</span>
                     <span className="text-gold-400 font-semibold font-sans">{formatCurrency(proj.totalAnnualImpact, currency, true)}</span>
                   </div>
-                  <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center justify-between py-2 border-b border-white/10">
                     <span className="text-white/50 text-sm font-sans">Annual Financial Impact (Con.)</span>
                     <span className="text-emerald-brand font-semibold font-sans">{formatCurrency(conservProj.totalAnnualImpact, currency, true)}</span>
                   </div>
+                  {proj.hoursSavedPerWeek > 0 && (
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-white/50 text-sm font-sans">Strategic Time Reclaimed</span>
+                      <span className="text-gold-400 font-semibold font-sans">~{proj.hoursSavedPerWeek.toFixed(0)} hrs/week</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col justify-center">
                   <p className="text-white/70 text-sm font-sans leading-relaxed">

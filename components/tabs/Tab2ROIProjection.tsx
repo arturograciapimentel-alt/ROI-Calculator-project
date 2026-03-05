@@ -86,9 +86,9 @@ export function Tab2ROIProjection() {
 
   // RevPAR uplift decomposed into ADR contribution and Occupancy contribution
   const revPARBreakdownData = [
-    { name: "ADR Impact",     value: proj.incrementalADRRevenue, fill: "#C4FF45" },
-    { name: "Occ. Impact",   value: proj.incrementalOccRevenue, fill: "#68FFF2" },
-    { name: "Labor Savings", value: proj.laborSavings,           fill: "#FFD9A0" },
+    { name: "ADR Impact",          value: proj.incrementalADRRevenue,  fill: "#C4FF45" },
+    { name: "Occ. Impact",        value: proj.incrementalOccRevenue,  fill: "#68FFF2" },
+    { name: "Systems Cost Savings", value: proj.systemsCostSavings,   fill: "#FFD9A0" },
   ].filter((d) => d.value > 0);
 
   const asmp = assumptions[scenario];
@@ -393,8 +393,8 @@ export function Tab2ROIProjection() {
                   fmt: (p: typeof projections.conservative) => formatCurrency(p.annualIncrementalRoomRevenue, currency, true),
                 },
                 {
-                  label: "Labor Savings",
-                  fmt: (p: typeof projections.conservative) => formatCurrency(p.laborSavings, currency, true),
+                  label: "Systems Cost Savings",
+                  fmt: (p: typeof projections.conservative) => formatCurrency(p.systemsCostSavings, currency, true),
                 },
                 {
                   label: "Total Annual Impact",
@@ -432,6 +432,25 @@ export function Tab2ROIProjection() {
           </table>
         </div>
       </div>
+
+      {/* Time Efficiency Callout */}
+      {proj.hoursSavedPerWeek > 0 && (
+        <div className="flex items-center gap-4 px-5 py-3.5 rounded-xl bg-white/3 border border-white/8">
+          <div className="p-2 rounded-lg bg-gold-500/15 text-gold-400 flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-white/80 text-sm font-sans font-semibold">
+              ~{proj.hoursSavedPerWeek.toFixed(0)} hrs/week reclaimed for strategic work
+            </p>
+            <p className="text-white/35 text-xs font-sans mt-0.5">
+              Duetto automates rate-setting, inventory management, and reporting tasks — freeing your team to focus on strategy, not spreadsheets.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4">

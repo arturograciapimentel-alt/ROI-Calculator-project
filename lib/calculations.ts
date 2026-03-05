@@ -77,12 +77,8 @@ export const DEFAULT_ASSUMPTIONS = {
 const ADR_SHARE = 0.6;
 
 export function calculateLaborSaved(inputs: PropertyInputs): number {
-  // Based on hours per week saved
-  const hoursPerYear = inputs.hoursPerWeekManual * 52;
-  const laborSaved = inputs.annualRMLaborCost > 0
-    ? inputs.annualRMLaborCost * 0.3
-    : hoursPerYear * 50; // $50/hr default if no labor cost entered
-  return laborSaved;
+  // Retained for backwards compatibility — use calculateROI for current logic
+  return inputs.annualRMSystemsCost > 0 ? inputs.annualRMSystemsCost : 0;
 }
 
 export function calculateROI(
@@ -123,16 +119,16 @@ export function calculateROI(
   // Distribution savings: removed from model
   const distributionSavings = 0;
 
-  // Labor savings from automation of manual pricing tasks
-  const hoursWeeklySaved = Math.min(inputs.hoursPerWeekManual * 0.5, 20);
-  const laborSavings =
-    inputs.annualRMLaborCost > 0
-      ? inputs.annualRMLaborCost * 0.25
-      : hoursWeeklySaved * 52 * hourlyLaborRate;
+  // Hours freed from manual pricing tasks (shown as productivity metric, not monetized labor)
+  const hoursSavedPerWeek = Math.min(inputs.hoursPerWeekManual * 0.5, 20);
+
+  // Systems cost savings: direct replacement of existing RM tools & services
+  // If the hotel pays for rate shoppers, pricing tools, or consulting, Duetto consolidates these
+  const systemsCostSavings = inputs.annualRMSystemsCost > 0 ? inputs.annualRMSystemsCost : 0;
 
   // Totals
   const totalIncrementalRevenue = annualIncrementalRoomRevenue; // group removed
-  const totalCostSavings = laborSavings;
+  const totalCostSavings = systemsCostSavings;
   const totalAnnualImpact = totalIncrementalRevenue + totalCostSavings;
 
   // ROI metrics
@@ -150,7 +146,8 @@ export function calculateROI(
     annualIncrementalRoomRevenue,
     groupRevenue,
     distributionSavings,
-    laborSavings,
+    systemsCostSavings,
+    hoursSavedPerWeek,
     totalIncrementalRevenue,
     totalCostSavings,
     totalAnnualImpact,
@@ -278,7 +275,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   numberOfProperties: 1,
   otaCommissionRate: 0.18,
   cpor: 45,
-  annualRMLaborCost: 180000,
+  annualRMSystemsCost: 25000, // e.g. rate shopper + pricing tool subscriptions
   pmsName: "",
   subscriptionCost: 42000,
   implementationFee: 15000,
@@ -323,7 +320,7 @@ export function aggregatePortfolioInputs(
   const currentOccupancy = weightedAvg("currentOccupancy");
   const groupBusinessPercent = weightedAvg("groupBusinessPercent");
   const yieldablePercent = weightedAvg("yieldablePercent");
-  const annualRMLaborCost = portfolioProperties.reduce((s, p) => s + (p.annualRMLaborCost || 0), 0);
+  const annualRMSystemsCost = portfolioProperties.reduce((s, p) => s + (p.annualRMSystemsCost || 0), 0);
   const duettoAnnualCost = portfolioProperties.reduce(
     (s, p) => s + (p.duettoAnnualCost > 0 ? p.duettoAnnualCost : estimateDuettoCost(p.totalRooms)),
     0
@@ -336,7 +333,7 @@ export function aggregatePortfolioInputs(
     currentOccupancy,
     groupBusinessPercent,
     yieldablePercent,
-    annualRMLaborCost,
+    annualRMSystemsCost,
     duettoAnnualCost,
     numberOfProperties: portfolioProperties.length,
   };
@@ -356,7 +353,7 @@ export function createPortfolioProperty(
     currentOccupancy: inputs.currentOccupancy,
     groupBusinessPercent: inputs.groupBusinessPercent,
     yieldablePercent: inputs.yieldablePercent,
-    annualRMLaborCost: inputs.annualRMLaborCost,
+    annualRMSystemsCost: inputs.annualRMSystemsCost,
     duettoAnnualCost: inputs.duettoAnnualCost,
     marketReportId: null,
   };

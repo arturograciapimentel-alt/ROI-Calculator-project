@@ -939,7 +939,23 @@ export function Tab4Market() {
             {/* Radar + context */}
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-3">Performance Radar vs. Market</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-white/40 text-xs font-sans uppercase tracking-wider">Performance Radar vs. Market</p>
+                  <div className="tooltip">
+                    <svg className="w-3.5 h-3.5 text-white/30 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    <div className="tooltip-text">
+                      Each axis scores your property relative to the market average (set to 50). Values above 50 mean you outperform the market on that dimension; below 50 means opportunity to improve.
+                      <br /><br />
+                      <strong>ADR, Occupancy, RevPAR</strong> — compared against your market benchmark (CoStar data if uploaded, or segment averages).
+                      <br />
+                      <strong>Yieldable Mix</strong> — the share of your room nights eligible for dynamic pricing. Higher is better.
+                      <br />
+                      <strong>RM Maturity</strong> — scored by your current approach: spreadsheets (low), basic RMS (mid), or a competitor RMS (high).
+                    </div>
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
                     <PolarGrid stroke="rgba(255,255,255,0.1)" />

@@ -14,7 +14,7 @@ function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
     inputs.currentADR > 0,
     inputs.currentOccupancy > 0,
     inputs.location,
-    inputs.annualRMLaborCost > 0,
+    inputs.annualRMSystemsCost > 0,
     inputs.cpor > 0,
   ];
   const filled = fields.filter(Boolean).length;
@@ -151,13 +151,13 @@ function PortfolioPropertyCard({
           />
         </InputField>
 
-        <InputField label="Annual RM Labor Cost">
+        <InputField label="Annual Pricing & RM Technology Costs" tooltip="Annual cost of rate shoppers, pricing tools, or outsourced RM consulting">
           <TextInput
             type="number"
-            value={property.annualRMLaborCost || ""}
-            onChange={(e) => onUpdate({ annualRMLaborCost: parseFloat(e.target.value) || 0 })}
+            value={property.annualRMSystemsCost || ""}
+            onChange={(e) => onUpdate({ annualRMSystemsCost: parseFloat(e.target.value) || 0 })}
             prefix={sym}
-            placeholder="80000"
+            placeholder="15000"
           />
         </InputField>
 
@@ -592,7 +592,7 @@ export function Tab1PropertyProfile() {
           <div>
             <InputField
               label="Hours/Week on Manual Pricing Tasks"
-              tooltip="Estimate of staff hours spent on rate setting, reporting, and spreadsheet management"
+              tooltip="Estimate of staff hours spent on rate setting, reporting, and spreadsheet management. Duetto automates these tasks, freeing your team for strategic revenue decisions."
             >
               <SliderInput
                 value={inputs.hoursPerWeekManual}
@@ -606,15 +606,15 @@ export function Tab1PropertyProfile() {
 
           {!isPortfolioMode && (
             <InputField
-              label={`Annual RM Labor Cost — ${sym}`}
-              tooltip="Total annual salary + benefits for RM staff"
+              label={`Annual Pricing & RM Technology Costs — ${sym}`}
+              tooltip="Annual cost of existing RM tools & services (e.g. rate shoppers, pricing tools, outsourced RM consulting). If Duetto replaces these, this becomes direct cost savings."
             >
               <TextInput
                 type="number"
-                value={inputs.annualRMLaborCost || ""}
-                onChange={(e) => update("annualRMLaborCost", parseFloat(e.target.value) || 0)}
+                value={inputs.annualRMSystemsCost || ""}
+                onChange={(e) => update("annualRMSystemsCost", parseFloat(e.target.value) || 0)}
                 prefix={sym}
-                placeholder="100000"
+                placeholder="15000"
               />
             </InputField>
           )}

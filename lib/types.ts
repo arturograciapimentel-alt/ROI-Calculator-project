@@ -8,7 +8,7 @@ export interface PortfolioProperty {
   currentOccupancy: number; // 0-1
   groupBusinessPercent: number; // 0-1
   yieldablePercent: number; // 0-1
-  annualRMLaborCost: number;
+  annualRMSystemsCost: number;
   duettoAnnualCost: number; // 0 = auto-estimate
   marketReportId: string | null; // ID of the CoStarBenchmark assigned to this property
 }
@@ -56,7 +56,7 @@ export interface PropertyInputs {
   // Cost Context
   otaCommissionRate: number; // 0-1
   cpor: number;
-  annualRMLaborCost: number;
+  annualRMSystemsCost: number; // Annual cost of pricing tools, rate shoppers & consulting services
 
   // Duetto investment breakdown
   pmsName: string;              // PMS system (e.g. "Opera Cloud" triggers OHIP fee)
@@ -82,7 +82,8 @@ export interface ROIProjection {
   annualIncrementalRoomRevenue: number;
   groupRevenue: number;
   distributionSavings: number;
-  laborSavings: number;
+  systemsCostSavings: number;
+  hoursSavedPerWeek: number;
 
   // Summary
   totalIncrementalRevenue: number;
