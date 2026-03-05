@@ -412,7 +412,7 @@ function HotelNumInput({
   onUpdate,
 }: {
   storeValue: number;
-  field: keyof Omit<DuettoMarketHotel, "id" | "name">;
+  field: "currentRoomNights" | "currentRevPAR" | "currentAvailableRooms" | "priorRoomNights" | "priorRevPAR" | "priorAvailableRooms";
   isInteger: boolean;
   onUpdate: (updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
 }) {
@@ -457,10 +457,25 @@ function HotelInputCard({
     { USD: "$", EUR: "€", GBP: "£", MXN: "$", CAD: "$", AUD: "$", JPY: "¥" } as Record<string, string>
   )[currency] ?? "$";
 
-  const rnPct   = pctChange(hotel.currentRoomNights,   hotel.priorRoomNights);
-  const adrPct  = pctChange(hotel.currentADR,          hotel.priorADR);
-  const rvrPct  = pctChange(hotel.currentRevPAR,       hotel.priorRevPAR);
-  const revPct  = pctChange(hotel.currentRoomRevenue,  hotel.priorRoomRevenue);
+  // Derived values — current period
+  const currentRoomRevenue = hotel.currentRevPAR * hotel.currentAvailableRooms;
+  const currentADR         = hotel.currentRoomNights > 0 ? currentRoomRevenue / hotel.currentRoomNights : 0;
+  const currentOccupancy   = hotel.currentAvailableRooms > 0 ? hotel.currentRoomNights / hotel.currentAvailableRooms : 0;
+
+  // Derived values — prior period
+  const priorRoomRevenue = hotel.priorRevPAR * hotel.priorAvailableRooms;
+  const priorADR         = hotel.priorRoomNights > 0 ? priorRoomRevenue / hotel.priorRoomNights : 0;
+  const priorOccupancy   = hotel.priorAvailableRooms > 0 ? hotel.priorRoomNights / hotel.priorAvailableRooms : 0;
+
+  const rnPct    = pctChange(hotel.currentRoomNights,    hotel.priorRoomNights);
+  const availPct = pctChange(hotel.currentAvailableRooms, hotel.priorAvailableRooms);
+  const rvrPct   = pctChange(hotel.currentRevPAR,        hotel.priorRevPAR);
+  const adrPct   = pctChange(currentADR,                 priorADR);
+  const revPct   = pctChange(currentRoomRevenue,         priorRoomRevenue);
+  const occPct   = pctChange(currentOccupancy,           priorOccupancy);
+
+  // Shared read-only cell style
+  const derivedCell = "w-full bg-navy-900/30 border border-white/5 rounded-lg px-2 py-1.5 text-white/40 text-xs font-sans text-right italic tabular-nums";
 
   return (
     <div className="p-4 rounded-xl border border-white/8 bg-navy-900/40 mb-3 last:mb-0">
@@ -478,39 +493,53 @@ function HotelInputCard({
         />
       </div>
 
+      {/* Legend */}
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-white/25 text-[10px] font-sans">Manual input</span>
+        <span className="text-white/15 text-[10px] font-sans italic">Calculated</span>
+      </div>
+
       {/* Metrics table */}
       <div className="overflow-x-auto -mx-1">
-        <table className="w-full text-xs font-sans min-w-[480px]">
+        <table className="w-full text-xs font-sans min-w-[600px]">
           <thead>
             <tr className="text-white/25 text-[10px] uppercase tracking-wider">
               <th className="text-left py-1.5 pr-3 w-16" />
               <th className="text-right py-1.5 px-2">Room Nights</th>
-              <th className="text-right py-1.5 px-2">ADR ({currSymbol})</th>
               <th className="text-right py-1.5 px-2">RevPAR ({currSymbol})</th>
-              <th className="text-right py-1.5 pl-2">Room Revenue ({currSymbol})</th>
+              <th className="text-right py-1.5 px-2">Avail. Rooms</th>
+              <th className="text-right py-1.5 px-2 text-white/15 italic">ADR ({currSymbol})</th>
+              <th className="text-right py-1.5 px-2 text-white/15 italic">Room Rev. ({currSymbol})</th>
+              <th className="text-right py-1.5 pl-2 text-white/15 italic">Occupancy</th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Current</td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomNights}  field="currentRoomNights"  isInteger onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentADR}         field="currentADR"         isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}      field="currentRevPAR"      isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 pl-2"><HotelNumInput storeValue={hotel.currentRoomRevenue} field="currentRoomRevenue"  isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRoomNights}     field="currentRoomNights"     isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}          field="currentRevPAR"          isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentAvailableRooms}  field="currentAvailableRooms"  isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{currentADR > 0 ? `${currSymbol}${currentADR.toFixed(2)}` : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{currentRoomRevenue > 0 ? formatCurrency(currentRoomRevenue, currency, true) : "—"}</div></td>
+              <td className="py-1.5 pl-2"><div className={derivedCell}>{currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Prior</td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomNights}    field="priorRoomNights"    isInteger onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorADR}           field="priorADR"           isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}        field="priorRevPAR"        isInteger={false} onUpdate={onUpdate} /></td>
-              <td className="py-1.5 pl-2"><HotelNumInput storeValue={hotel.priorRoomRevenue}   field="priorRoomRevenue"   isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRoomNights}        field="priorRoomNights"        isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}            field="priorRevPAR"            isInteger={false} onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorAvailableRooms}    field="priorAvailableRooms"    isInteger onUpdate={onUpdate} /></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{priorADR > 0 ? `${currSymbol}${priorADR.toFixed(2)}` : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{priorRoomRevenue > 0 ? formatCurrency(priorRoomRevenue, currency, true) : "—"}</div></td>
+              <td className="py-1.5 pl-2"><div className={derivedCell}>{priorOccupancy > 0 ? `${(priorOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/12">
               <td className="py-1.5 pr-3 text-white/25 text-[10px] uppercase tracking-wider whitespace-nowrap">YoY</td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={rnPct} /></td>
-              <td className="py-1.5 px-2 text-right"><PctBadge value={adrPct} /></td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={rvrPct} /></td>
-              <td className="py-1.5 pl-2 text-right"><PctBadge value={revPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={availPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={adrPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={revPct} /></td>
+              <td className="py-1.5 pl-2 text-right"><PctBadge value={occPct} /></td>
             </tr>
           </tbody>
         </table>
@@ -526,30 +555,27 @@ function AggregateCard({
   hotels: DuettoMarketHotel[];
   currency: string;
 }) {
-  // Room nights — direct sum of occupied nights
-  const totalCurrentRN  = hotels.reduce((s, h) => s + h.currentRoomNights,  0);
-  const totalPriorRN    = hotels.reduce((s, h) => s + h.priorRoomNights,    0);
-  // Room revenue — direct sum
-  const totalCurrentRev = hotels.reduce((s, h) => s + h.currentRoomRevenue, 0);
-  const totalPriorRev   = hotels.reduce((s, h) => s + h.priorRoomRevenue,   0);
+  // Room nights and available rooms — direct sums
+  const totalCurrentRN    = hotels.reduce((s, h) => s + h.currentRoomNights,    0);
+  const totalPriorRN      = hotels.reduce((s, h) => s + h.priorRoomNights,      0);
+  const totalCurrentAvail = hotels.reduce((s, h) => s + h.currentAvailableRooms, 0);
+  const totalPriorAvail   = hotels.reduce((s, h) => s + h.priorAvailableRooms,   0);
 
-  // Weighted ADR: Σ(enteredADR × RoomNights) / Σ(RoomNights)
-  // Using entered ADR values directly ensures consistency with individual hotel YoY displays.
-  const currentADR = totalCurrentRN > 0
-    ? hotels.reduce((s, h) => s + h.currentADR * h.currentRoomNights, 0) / totalCurrentRN
-    : 0;
-  const priorADR = totalPriorRN > 0
-    ? hotels.reduce((s, h) => s + h.priorADR * h.priorRoomNights, 0) / totalPriorRN
-    : 0;
+  // Room revenue — derived from RevPAR × Available Rooms per hotel, then summed
+  const totalCurrentRev = hotels.reduce((s, h) => s + h.currentRevPAR * h.currentAvailableRooms, 0);
+  const totalPriorRev   = hotels.reduce((s, h) => s + h.priorRevPAR   * h.priorAvailableRooms,   0);
 
-  // Weighted RevPAR: Σ(enteredRevPAR × RoomNights) / Σ(RoomNights)
-  // Same weighting basis as ADR so the % changes are directionally consistent.
-  const currentRevPAR = totalCurrentRN > 0
-    ? hotels.reduce((s, h) => s + h.currentRevPAR * h.currentRoomNights, 0) / totalCurrentRN
-    : 0;
-  const priorRevPAR = totalPriorRN > 0
-    ? hotels.reduce((s, h) => s + h.priorRevPAR * h.priorRoomNights, 0) / totalPriorRN
-    : 0;
+  // Wtd. RevPAR = Total Room Revenue / Total Available Rooms (standard STR definition)
+  const currentRevPAR = totalCurrentAvail > 0 ? totalCurrentRev / totalCurrentAvail : 0;
+  const priorRevPAR   = totalPriorAvail   > 0 ? totalPriorRev   / totalPriorAvail   : 0;
+
+  // Wtd. ADR = Total Room Revenue / Total Occupied Room Nights
+  const currentADR = totalCurrentRN > 0 ? totalCurrentRev / totalCurrentRN : 0;
+  const priorADR   = totalPriorRN   > 0 ? totalPriorRev   / totalPriorRN   : 0;
+
+  // Portfolio Occupancy = Total Occupied Room Nights / Total Available Rooms
+  const currentOccupancy = totalCurrentAvail > 0 ? totalCurrentRN / totalCurrentAvail : 0;
+  const priorOccupancy   = totalPriorAvail   > 0 ? totalPriorRN   / totalPriorAvail   : 0;
 
   const metrics = [
     {
@@ -559,22 +585,34 @@ function AggregateCard({
       pct: pctChange(totalCurrentRN, totalPriorRN),
     },
     {
-      label: "Wtd. ADR",
-      current: formatCurrency(currentADR, currency),
-      prior:   formatCurrency(priorADR, currency),
-      pct: pctChange(currentADR, priorADR),
-    },
-    {
       label: "Wtd. RevPAR",
       current: formatCurrency(currentRevPAR, currency),
       prior:   formatCurrency(priorRevPAR, currency),
       pct: pctChange(currentRevPAR, priorRevPAR),
     },
     {
+      label: "Wtd. ADR",
+      current: formatCurrency(currentADR, currency),
+      prior:   formatCurrency(priorADR, currency),
+      pct: pctChange(currentADR, priorADR),
+    },
+    {
       label: "Room Revenue",
       current: formatCurrency(totalCurrentRev, currency, true),
       prior:   formatCurrency(totalPriorRev, currency, true),
       pct: pctChange(totalCurrentRev, totalPriorRev),
+    },
+    {
+      label: "Avail. Rooms",
+      current: totalCurrentAvail.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      prior:   totalPriorAvail.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      pct: pctChange(totalCurrentAvail, totalPriorAvail),
+    },
+    {
+      label: "Occupancy",
+      current: currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—",
+      prior:   priorOccupancy   > 0 ? `${(priorOccupancy   * 100).toFixed(1)}%` : "—",
+      pct: pctChange(currentOccupancy, priorOccupancy),
     },
   ];
 
@@ -583,7 +621,7 @@ function AggregateCard({
       <p className="text-gold-400 text-[10px] font-sans uppercase tracking-wider font-semibold mb-3">
         Market Portfolio — {hotels.length} Duetto Hotels Combined
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {metrics.map(({ label, current, prior, pct: p }) => (
           <div key={label} className="text-center p-3 rounded-lg bg-navy-800/40">
             <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1.5">{label}</p>
@@ -612,7 +650,7 @@ function DuettoClientHotelsSection({
   const hotelCount = hotels.length;
 
   const hasAnyData = hotels.some(
-    (h) => h.currentRoomNights > 0 || h.priorRoomNights > 0 || h.currentADR > 0
+    (h) => h.currentRoomNights > 0 || h.priorRoomNights > 0 || h.currentRevPAR > 0
   );
 
   return (
