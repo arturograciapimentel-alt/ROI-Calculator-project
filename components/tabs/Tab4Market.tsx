@@ -509,8 +509,8 @@ function HotelInputCard({
               <th className="text-right py-1.5 px-2">ADR ({currSymbol})</th>
               <th className="text-right py-1.5 px-2">RevPAR ({currSymbol})</th>
               <th className="text-right py-1.5 px-2 text-white/15 italic">Room Rev. ({currSymbol})</th>
-              <th className="text-right py-1.5 px-2 text-white/15 italic">Avail. Rooms</th>
-              <th className="text-right py-1.5 pl-2 text-white/15 italic">Occupancy</th>
+              <th className="text-right py-1.5 px-2 text-white/15 italic">Occupancy</th>
+              <th className="text-right py-1.5 pl-2 text-white/15 italic">Avail. Rooms</th>
             </tr>
           </thead>
           <tbody>
@@ -520,8 +520,8 @@ function HotelInputCard({
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentADR}        field="currentADR"        isInteger={false} onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.currentRevPAR}     field="currentRevPAR"     isInteger={false} onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><div className={derivedCell}>{currentRoomRevenue > 0 ? formatCurrency(currentRoomRevenue, currency, true) : "—"}</div></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{currentAvailableRooms > 0 ? Math.round(currentAvailableRooms).toLocaleString() : "—"}</div></td>
-              <td className="py-1.5 pl-2"><div className={derivedCell}>{currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
+              <td className="py-1.5 pl-2"><div className={derivedCell}>{currentAvailableRooms > 0 ? Math.round(currentAvailableRooms).toLocaleString() : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/5">
               <td className="py-1.5 pr-3 text-white/35 text-[10px] uppercase tracking-wider whitespace-nowrap">Prior</td>
@@ -529,8 +529,8 @@ function HotelInputCard({
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorADR}          field="priorADR"          isInteger={false} onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><HotelNumInput storeValue={hotel.priorRevPAR}       field="priorRevPAR"       isInteger={false} onUpdate={onUpdate} /></td>
               <td className="py-1.5 px-2"><div className={derivedCell}>{priorRoomRevenue > 0 ? formatCurrency(priorRoomRevenue, currency, true) : "—"}</div></td>
-              <td className="py-1.5 px-2"><div className={derivedCell}>{priorAvailableRooms > 0 ? Math.round(priorAvailableRooms).toLocaleString() : "—"}</div></td>
-              <td className="py-1.5 pl-2"><div className={derivedCell}>{priorOccupancy > 0 ? `${(priorOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
+              <td className="py-1.5 px-2"><div className={derivedCell}>{priorOccupancy > 0 ? `${(priorOccupancy * 100).toFixed(1)}%` : "—"}</div></td>
+              <td className="py-1.5 pl-2"><div className={derivedCell}>{priorAvailableRooms > 0 ? Math.round(priorAvailableRooms).toLocaleString() : "—"}</div></td>
             </tr>
             <tr className="border-t border-white/12">
               <td className="py-1.5 pr-3 text-white/25 text-[10px] uppercase tracking-wider whitespace-nowrap">YoY</td>
@@ -538,8 +538,8 @@ function HotelInputCard({
               <td className="py-1.5 px-2 text-right"><PctBadge value={adrPct} /></td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={rvrPct} /></td>
               <td className="py-1.5 px-2 text-right"><PctBadge value={revPct} /></td>
-              <td className="py-1.5 px-2 text-right"><PctBadge value={availPct} /></td>
-              <td className="py-1.5 pl-2 text-right"><PctBadge value={occPct} /></td>
+              <td className="py-1.5 px-2 text-right"><PctBadge value={occPct} /></td>
+              <td className="py-1.5 pl-2 text-right"><PctBadge value={availPct} /></td>
             </tr>
           </tbody>
         </table>
@@ -587,16 +587,16 @@ function AggregateCard({
       pct: pctChange(totalCurrentRN, totalPriorRN),
     },
     {
-      label: "Wtd. RevPAR",
-      current: formatCurrency(currentRevPAR, currency),
-      prior:   formatCurrency(priorRevPAR, currency),
-      pct: pctChange(currentRevPAR, priorRevPAR),
-    },
-    {
       label: "Wtd. ADR",
       current: formatCurrency(currentADR, currency),
       prior:   formatCurrency(priorADR, currency),
       pct: pctChange(currentADR, priorADR),
+    },
+    {
+      label: "Wtd. RevPAR",
+      current: formatCurrency(currentRevPAR, currency),
+      prior:   formatCurrency(priorRevPAR, currency),
+      pct: pctChange(currentRevPAR, priorRevPAR),
     },
     {
       label: "Room Revenue",
@@ -605,16 +605,16 @@ function AggregateCard({
       pct: pctChange(totalCurrentRev, totalPriorRev),
     },
     {
-      label: "Avail. Rooms",
-      current: totalCurrentAvail.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-      prior:   totalPriorAvail.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-      pct: pctChange(totalCurrentAvail, totalPriorAvail),
-    },
-    {
       label: "Occupancy",
       current: currentOccupancy > 0 ? `${(currentOccupancy * 100).toFixed(1)}%` : "—",
       prior:   priorOccupancy   > 0 ? `${(priorOccupancy   * 100).toFixed(1)}%` : "—",
       pct: pctChange(currentOccupancy, priorOccupancy),
+    },
+    {
+      label: "Avail. Rooms",
+      current: totalCurrentAvail.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      prior:   totalPriorAvail.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+      pct: pctChange(totalCurrentAvail, totalPriorAvail),
     },
   ];
 
