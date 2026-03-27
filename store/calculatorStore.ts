@@ -472,6 +472,22 @@ export const useCalculatorStore = create<CalculatorStore>()(
         exchangeRates: state.exchangeRates,
         costarBenchmarks: state.costarBenchmarks,
       }),
+      // Recalculate projections from restored inputs/settings on page load,
+      // so they reflect the correct outputCurrency instead of the default USD values.
+      merge: (persisted, current) => {
+        const p = persisted as Partial<CalculatorState>;
+        const merged = { ...current, ...p } as typeof current;
+        const { projections, yearlyProjections } = recalculate(
+          merged.inputs,
+          merged.assumptions,
+          merged.hourlyLaborRate,
+          merged.capRate,
+          merged.portfolioProperties,
+          merged.outputCurrency,
+          merged.exchangeRates
+        );
+        return { ...merged, projections, yearlyProjections };
+      },
     }
   )
 );

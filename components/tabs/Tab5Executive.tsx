@@ -11,6 +11,9 @@ import {
   aggregatePortfolioInputs,
   PROPERTY_TYPE_LABELS,
   RM_APPROACH_LABELS,
+  normalizeInputCurrencies,
+  convertCurrency,
+  CURRENCY_SYMBOLS,
 } from "@/lib/calculations";
 import { clsx } from "clsx";
 import type { Currency } from "@/lib/types";
@@ -31,7 +34,7 @@ export function Tab5Executive() {
   const {
     inputs, projections, scenario, yearlyProjections, capRate,
     preparedBy, nextSteps, setPreparedBy, setNextSteps, portfolioProperties,
-    outputCurrency, setOutputCurrency,
+    outputCurrency, setOutputCurrency, exchangeRates,
   } = useCalculatorStore();
 
   const [isExporting, setIsExporting] = useState(false);
@@ -40,11 +43,25 @@ export function Tab5Executive() {
   const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
+
+  // Normalize all monetary display values to the selected output currency
+  const normalizedInputs = normalizeInputCurrencies(effectiveInputs, currency, exchangeRates, isPortfolioMode);
+  const effectiveCost = computeDuettoAnnualCost(normalizedInputs);
+  const currentRevPAR = normalizedInputs.currentADR * normalizedInputs.currentOccupancy;
+
   const proj = projections.moderate;
   const conservProj = projections.conservative;
-  const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
-  const currentRevPAR = effectiveInputs.currentADR * effectiveInputs.currentOccupancy;
-  const annualRevenue = currentRevPAR * effectiveInputs.totalRooms * 365;
+
+  // Build exchange rate disclosure for any currency that differs from outputCurrency
+  const sourceCurrencies = new Set<string>();
+  if (inputs.currency !== currency) sourceCurrencies.add(inputs.currency);
+  if (!isPortfolioMode && inputs.duettoCurrency !== currency) sourceCurrencies.add(inputs.duettoCurrency);
+  const exchangeRateLines = Array.from(sourceCurrencies).map((from) => {
+    const rate = convertCurrency(1, from, currency, exchangeRates);
+    const sym = CURRENCY_SYMBOLS[currency] ?? currency;
+    return `1 ${from} = ${sym}${rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  });
+  const showExchangeNote = exchangeRateLines.length > 0;
   const totalFiveYearNet = yearlyProjections.reduce((s, y) => s + y.netBenefit, 0);
   const totalFiveYearImpact = yearlyProjections.reduce((s, y) => s + y.totalImpact, 0);
   const totalFiveYearInvestment = yearlyProjections.reduce((s, y) => s + y.duettoInvestment, 0);
@@ -218,6 +235,11 @@ export function Tab5Executive() {
             <div className="text-right">
               <p className="text-white/30 text-xs font-sans">Annual Duetto Investment</p>
               <p className="text-2xl font-serif font-bold text-white">{formatCurrency(effectiveCost, currency)}</p>
+              {showExchangeNote && (
+                <p className="text-white/25 text-[10px] font-sans mt-0.5">
+                  {exchangeRateLines.join(" · ")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -250,10 +272,10 @@ export function Tab5Executive() {
                 </p>
                 <div className="space-y-2">
                   {[
-                    [isPortfolioMode ? "Blended ADR" : "Current ADR", formatCurrency(effectiveInputs.currentADR, currency)],
-                    [isPortfolioMode ? "Blended Occupancy" : "Current Occupancy", formatPercent(effectiveInputs.currentOccupancy)],
+                    [isPortfolioMode ? "Blended ADR" : "Current ADR", formatCurrency(normalizedInputs.currentADR, currency)],
+                    [isPortfolioMode ? "Blended Occupancy" : "Current Occupancy", formatPercent(normalizedInputs.currentOccupancy)],
                     [isPortfolioMode ? "Portfolio RevPAR" : "Current RevPAR", formatCurrency(currentRevPAR, currency)],
-                    ["Yieldable Mix", `${Math.round(effectiveInputs.yieldablePercent * 100)}% of room nights`],
+                    ["Yieldable Mix", `${Math.round(normalizedInputs.yieldablePercent * 100)}% of room nights`],
                     ["RM Approach", RM_APPROACH_LABELS[inputs.rmApproach]],
                   ].map(([k, v]) => (
                     <div key={k} className="flex items-center gap-3 py-1.5 border-b border-white/5">
@@ -280,13 +302,14 @@ export function Tab5Executive() {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {portfolioProperties.map((p) => {
-                        const pRevPAR = p.currentADR * p.currentOccupancy;
+                        const pADR = convertCurrency(p.currentADR, inputs.currency, currency, exchangeRates);
+                        const pRevPAR = pADR * p.currentOccupancy;
                         return (
                           <tr key={p.id}>
                             <td className="py-1.5 pr-4 text-white font-medium">{p.propertyName || "—"}</td>
                             <td className="py-1.5 pr-4 text-white/50">{PROPERTY_TYPE_LABELS[p.propertyType] ?? p.propertyType}</td>
                             <td className="py-1.5 pr-4 text-white/70">{p.totalRooms}</td>
-                            <td className="py-1.5 pr-4 text-white/70">{formatCurrency(p.currentADR, currency)}</td>
+                            <td className="py-1.5 pr-4 text-white/70">{formatCurrency(pADR, currency)}</td>
                             <td className="py-1.5 pr-4 text-white/70">{formatPercent(p.currentOccupancy)}</td>
                             <td className="py-1.5 text-emerald-brand font-semibold">{formatCurrency(pRevPAR, currency)}</td>
                           </tr>
@@ -295,9 +318,9 @@ export function Tab5Executive() {
                       <tr className="border-t border-gold-500/30">
                         <td className="py-1.5 pr-4 text-gold-400 font-semibold">Portfolio Blended</td>
                         <td className="py-1.5 pr-4 text-white/40">—</td>
-                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{effectiveInputs.totalRooms}</td>
-                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{formatCurrency(effectiveInputs.currentADR, currency)}</td>
-                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{formatPercent(effectiveInputs.currentOccupancy)}</td>
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{normalizedInputs.totalRooms}</td>
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{formatCurrency(normalizedInputs.currentADR, currency)}</td>
+                        <td className="py-1.5 pr-4 text-gold-400 font-semibold">{formatPercent(normalizedInputs.currentOccupancy)}</td>
                         <td className="py-1.5 text-gold-400 font-semibold">{formatCurrency(currentRevPAR, currency)}</td>
                       </tr>
                     </tbody>
@@ -315,8 +338,8 @@ export function Tab5Executive() {
                 {[
                   {
                     label: "RevPAR Improvement",
-                    value: `+${currentRevPAR > 0 ? (((proj.newRevPAR - currentRevPAR) / currentRevPAR) * 100).toFixed(1) : "0"}%`,
-                    sub: `${formatCurrency(currentRevPAR, currency)} → ${formatCurrency(proj.newRevPAR, currency)}`,
+                    value: `+${proj.currentRevPAR > 0 ? (((proj.newRevPAR - proj.currentRevPAR) / proj.currentRevPAR) * 100).toFixed(1) : "0"}%`,
+                    sub: `${formatCurrency(proj.currentRevPAR, currency)} → ${formatCurrency(proj.newRevPAR, currency)}`,
                     variant: "emerald",
                   },
                   {
@@ -470,7 +493,7 @@ export function Tab5Executive() {
                 </div>
                 <div className="flex flex-col justify-center">
                   <p className="text-white/70 text-sm font-sans leading-relaxed">
-                    <span className="text-emerald-brand font-semibold">RevPAR improvement of {currentRevPAR > 0 ? (((proj.newRevPAR - currentRevPAR) / currentRevPAR) * 100).toFixed(1) : "0"}%</span>{" "}
+                    <span className="text-emerald-brand font-semibold">RevPAR improvement of {proj.currentRevPAR > 0 ? (((proj.newRevPAR - proj.currentRevPAR) / proj.currentRevPAR) * 100).toFixed(1) : "0"}%</span>{" "}
                     on {Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory{isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""} delivers{" "}
                     <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> ROI annually —
                     and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years.
@@ -499,15 +522,30 @@ export function Tab5Executive() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-white/10">
-              <div className="flex items-center gap-2">
-                <DuettoIcon size={22} />
-                <span className="text-white/30 text-xs font-sans">duettocloud.com</span>
+            <div className="pt-4 border-t border-white/10 space-y-2">
+              {showExchangeNote && (
+                <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-white/3 border border-white/8">
+                  <svg className="w-3 h-3 text-white/30 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  <p className="text-white/40 text-[10px] font-sans">
+                    All figures displayed in <span className="text-white/60 font-semibold">{currency}</span>.
+                    Exchange rate{exchangeRateLines.length > 1 ? "s" : ""} applied:{" "}
+                    <span className="text-white/60">{exchangeRateLines.join(" · ")}</span>
+                    {" "}· Rates configurable in Property Profile → Exchange Rates.
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DuettoIcon size={22} />
+                  <span className="text-white/30 text-xs font-sans">duettocloud.com</span>
+                </div>
+                <p className="text-white/20 text-xs font-sans">
+                  Projections are estimates based on industry benchmarks and provided property data. Actual results may vary.
+                  Confidential — prepared for {inputs.propertyName || "prospect"}.
+                </p>
               </div>
-              <p className="text-white/20 text-xs font-sans">
-                Projections are estimates based on industry benchmarks and provided property data. Actual results may vary.
-                Confidential — prepared for {inputs.propertyName || "prospect"}.
-              </p>
             </div>
           </div>
         </div>
