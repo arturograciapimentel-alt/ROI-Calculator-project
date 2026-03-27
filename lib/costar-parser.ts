@@ -84,20 +84,9 @@ function extractClassMetrics(
   };
 }
 
-function extractHistorical(text: string): CoStarHistoricalRow[] {
-  // Looks for the OVERALL PERFORMANCE table section.
-  // Each row: "(year|YTD)  84.1%  -0.2%  $333.71  4.7%  $280.71  4.5%"
-  // Forecast rows (2026+) appear before the current year in the CoStar layout.
+function extractHistoricalFromSlice(slice: string): CoStarHistoricalRow[] {
   const rows: CoStarHistoricalRow[] = [];
   const seen = new Set<number>();
-
-  // Identify the year range — find all years 20xx near the pattern
-  const overallIdx = text.indexOf("OVERALL PERFORMANCE");
-  const luxuryIdx = text.indexOf("LUXURY & UPPER UPSCALE PERFORMANCE");
-  const slice = overallIdx >= 0
-    ? text.slice(overallIdx, luxuryIdx > overallIdx ? luxuryIdx : overallIdx + 4000)
-    : text;
-
   const re =
     /\b(20\d{2})\s+([\d.]+)%\s+[-\d.]+%\s+\$([\d.,]+)\s+[-\d.]+%\s+\$([\d.,]+)/g;
   let match: RegExpExecArray | null;
@@ -113,8 +102,31 @@ function extractHistorical(text: string): CoStarHistoricalRow[] {
       isForecast: year > new Date().getFullYear(),
     });
   }
-
   return rows.sort((a, b) => a.year - b.year);
+}
+
+function extractHistorical(text: string): CoStarHistoricalRow[] {
+  // Looks for the OVERALL PERFORMANCE table section.
+  // Each row: "(year|YTD)  84.1%  -0.2%  $333.71  4.7%  $280.71  4.5%"
+  // Forecast rows (2026+) appear before the current year in the CoStar layout.
+  const overallIdx = text.indexOf("OVERALL PERFORMANCE");
+  const luxuryIdx = text.indexOf("LUXURY & UPPER UPSCALE PERFORMANCE");
+  const slice = overallIdx >= 0
+    ? text.slice(overallIdx, luxuryIdx > overallIdx ? luxuryIdx : overallIdx + 4000)
+    : text;
+  return extractHistoricalFromSlice(slice);
+}
+
+function extractClassHistorical(
+  text: string,
+  sectionLabel: string,
+  nextSectionLabel: string
+): CoStarHistoricalRow[] {
+  const startIdx = text.indexOf(sectionLabel);
+  if (startIdx < 0) return [];
+  const nextIdx = text.indexOf(nextSectionLabel, startIdx);
+  const endIdx = nextIdx > startIdx ? nextIdx : startIdx + 4000;
+  return extractHistoricalFromSlice(text.slice(startIdx, endIdx));
 }
 
 function extractSubmarkets(text: string): CoStarSubmarket[] {
@@ -175,6 +187,10 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
   const historical = extractHistorical(text);
   const submarkets = extractSubmarkets(text);
 
+  const luxHistorical = extractClassHistorical(text, "LUXURY & UPPER UPSCALE PERFORMANCE", "UPSCALE & UPPER MIDSCALE PERFORMANCE");
+  const upsHistorical = extractClassHistorical(text, "UPSCALE & UPPER MIDSCALE PERFORMANCE", "MIDSCALE & ECONOMY PERFORMANCE");
+  const midHistorical = extractClassHistorical(text, "MIDSCALE & ECONOMY PERFORMANCE", "SUBMARKET PERFORMANCE");
+
   const benchmark: CoStarBenchmark = {
     id: `costar-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     marketName,
@@ -188,6 +204,11 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
     },
     submarkets,
     historical,
+    byClassHistorical: {
+      "luxury-upper-upscale": luxHistorical,
+      "upscale-upper-midscale": upsHistorical,
+      "midscale-economy": midHistorical,
+    },
   };
 
   return { benchmark, warnings };

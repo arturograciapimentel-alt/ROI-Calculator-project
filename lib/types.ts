@@ -152,6 +152,12 @@ export interface CoStarBenchmark {
   };
   submarkets: CoStarSubmarket[];
   historical: CoStarHistoricalRow[];
+  /** Historical rows per class segment for YoY display (parsed from class-specific tables) */
+  byClassHistorical?: {
+    "luxury-upper-upscale"?: CoStarHistoricalRow[];
+    "upscale-upper-midscale"?: CoStarHistoricalRow[];
+    "midscale-economy"?: CoStarHistoricalRow[];
+  };
 }
 
 // One Duetto-client hotel entry in a market (12-month production data)

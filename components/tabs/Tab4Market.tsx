@@ -5,8 +5,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs, CURRENCY_SYMBOLS } from "@/lib/calculations";
-import type { CoStarBenchmark, CoStarClassMetrics, Currency, DuettoMarketHotel } from "@/lib/types";
+import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs, CURRENCY_SYMBOLS, convertCurrency } from "@/lib/calculations";
+import type { CoStarBenchmark, CoStarClassMetrics, CoStarHistoricalRow, Currency, DuettoMarketHotel } from "@/lib/types";
 
 const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
   { value: "USD", label: "USD ($)" },
@@ -75,13 +75,27 @@ function DuettoFeatureCard({ title, description, badge, icon }: DuettoFeatureCar
 
 // ─── CoStar class breakdown card ──────────────────────────────────────────────
 
+function computeSegmentYoY(
+  historicalRows?: CoStarHistoricalRow[]
+): { occDelta: number; adrPct: number; revparPct: number } | null {
+  if (!historicalRows?.length) return null;
+  const actual = historicalRows.filter((r) => !r.isForecast).sort((a, b) => b.year - a.year);
+  if (actual.length < 2 || !actual[1].adr) return null;
+  return {
+    occDelta: actual[0].occupancy - actual[1].occupancy,
+    adrPct: actual[1].adr > 0 ? ((actual[0].adr - actual[1].adr) / actual[1].adr) * 100 : 0,
+    revparPct: actual[1].revpar > 0 ? ((actual[0].revpar - actual[1].revpar) / actual[1].revpar) * 100 : 0,
+  };
+}
+
 function CoStarClassCard({
-  label, metrics, currency, highlighted,
+  label, metrics, currency, highlighted, yoy,
 }: {
   label: string;
   metrics: CoStarClassMetrics;
   currency: string;
   highlighted: boolean;
+  yoy?: { occDelta: number; adrPct: number; revparPct: number } | null;
 }) {
   return (
     <div className={clsx(
@@ -94,12 +108,20 @@ function CoStarClassCard({
       </p>
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: "Occupancy", value: `${Math.round(metrics.occupancy * 100)}%` },
-          { label: "ADR", value: formatCurrency(metrics.adr, currency) },
-          { label: "RevPAR", value: formatCurrency(metrics.revpar, currency) },
-        ].map(({ label: l, value }) => (
+          { label: "Occupancy", value: `${Math.round(metrics.occupancy * 100)}%`, yoyVal: yoy?.occDelta ?? null, isPoints: true },
+          { label: "ADR", value: formatCurrency(metrics.adr, currency), yoyVal: yoy?.adrPct ?? null, isPoints: false },
+          { label: "RevPAR", value: formatCurrency(metrics.revpar, currency), yoyVal: yoy?.revparPct ?? null, isPoints: false },
+        ].map(({ label: l, value, yoyVal, isPoints }) => (
           <div key={l} className="text-center">
             <p className="text-white font-serif font-bold text-base">{value}</p>
+            {yoyVal !== null && (
+              <span className={clsx(
+                "block text-[10px] font-sans font-semibold",
+                yoyVal >= 0 ? "text-emerald-brand" : "text-[#FF5900]"
+              )}>
+                {yoyVal >= 0 ? "+" : ""}{isPoints ? `${(yoyVal * 100).toFixed(1)}pp` : `${yoyVal.toFixed(1)}%`}
+              </span>
+            )}
             <p className="text-white/30 text-[10px] font-sans">{l}</p>
           </div>
         ))}
@@ -554,6 +576,7 @@ function MarketDetailCard({
             metrics={benchmark.byClass[key]}
             currency={currency}
             highlighted={key === highlightedClass}
+            yoy={computeSegmentYoY(benchmark.byClassHistorical?.[key])}
           />
         ))}
       </div>
@@ -989,7 +1012,7 @@ export function Tab4Market() {
   const {
     inputs, projections, scenario, costarBenchmarks,
     addCostarBenchmark, removeCostarBenchmark, portfolioProperties,
-    updateCostarBenchmarkCurrency, outputCurrency,
+    updateCostarBenchmarkCurrency, outputCurrency, exchangeRates,
   } = useCalculatorStore();
   const proj = projections[scenario];
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
@@ -1025,17 +1048,28 @@ export function Tab4Market() {
     benchmarkRevPAR = benchmarkADR * benchmarkOcc;
   }
 
-  const adrVsBenchmark = benchmarkADR > 0 ? ((effectiveInputs.currentADR - benchmarkADR) / benchmarkADR) * 100 : 0;
+  // Convert property ADR/RevPAR to benchmark currency for accurate cross-currency comparison
+  const bCurrency = primaryBenchmark?.currency ?? "USD";
+  const propCurrency = inputs.currency;
+  const needsCurrencyConversion = benchmarkSource === "costar" && propCurrency !== bCurrency;
+  const propADRConverted = needsCurrencyConversion
+    ? convertCurrency(effectiveInputs.currentADR, propCurrency, bCurrency, exchangeRates)
+    : effectiveInputs.currentADR;
+  const propRevPARConverted = needsCurrencyConversion
+    ? convertCurrency(currentRevPAR, propCurrency, bCurrency, exchangeRates)
+    : currentRevPAR;
+
+  const adrVsBenchmark = benchmarkADR > 0 ? ((propADRConverted - benchmarkADR) / benchmarkADR) * 100 : 0;
   const occVsBenchmark = benchmarkOcc > 0 ? ((effectiveInputs.currentOccupancy - benchmarkOcc) / benchmarkOcc) * 100 : 0;
-  const revParVsBenchmark = benchmarkRevPAR > 0 ? ((currentRevPAR - benchmarkRevPAR) / benchmarkRevPAR) * 100 : 0;
+  const revParVsBenchmark = benchmarkRevPAR > 0 ? ((propRevPARConverted - benchmarkRevPAR) / benchmarkRevPAR) * 100 : 0;
 
   const monthlyOpportunityCost = proj.totalAnnualImpact / 12;
 
   // ── Radar data ────────────────────────────────────────────────────────────
   const radarData = [
-    { metric: "ADR", current: benchmarkADR > 0 ? Math.round((effectiveInputs.currentADR / benchmarkADR) * 50) : 50, market: 50 },
+    { metric: "ADR", current: benchmarkADR > 0 ? Math.round((propADRConverted / benchmarkADR) * 50) : 50, market: 50 },
     { metric: "Occupancy", current: benchmarkOcc > 0 ? Math.round((effectiveInputs.currentOccupancy / benchmarkOcc) * 50) : 50, market: 50 },
-    { metric: "RevPAR", current: benchmarkRevPAR > 0 ? Math.round((currentRevPAR / benchmarkRevPAR) * 50) : 50, market: 50 },
+    { metric: "RevPAR", current: benchmarkRevPAR > 0 ? Math.round((propRevPARConverted / benchmarkRevPAR) * 50) : 50, market: 50 },
     { metric: "Yieldable Mix", current: Math.round(effectiveInputs.yieldablePercent * 100), market: 70 },
     { metric: "RM Maturity", current: effectiveInputs.rmApproach === "spreadsheets" ? 10 : effectiveInputs.rmApproach === "competitor-rms" ? 70 : 30, market: 50 },
   ];
@@ -1135,11 +1169,15 @@ export function Tab4Market() {
         {isPortfolioMode && costarBenchmarks.length > 0 ? (
           <div className="space-y-5">
             {costarBenchmarks.map((b) => {
+              const benchCur = b.currency ?? "USD";
               const assigned = propertiesPerBenchmark(b.id).map((p) => ({
                 id: p.id,
                 propertyName: p.propertyName,
                 propertyType: p.propertyType,
-                currentADR: p.currentADR,
+                // Pre-convert property ADR to benchmark currency for accurate comparison
+                currentADR: inputs.currency !== benchCur
+                  ? convertCurrency(p.currentADR, inputs.currency, benchCur, exchangeRates)
+                  : p.currentADR,
                 currentOccupancy: p.currentOccupancy,
               }));
               // Highlighted class = most common class among assigned properties, or first property's class
@@ -1148,7 +1186,7 @@ export function Tab4Market() {
                 <MarketDetailCard
                   key={b.id}
                   benchmark={b}
-                  currency={b.currency ?? "USD"}
+                  currency={benchCur}
                   assignedProperties={assigned}
                   highlightedClass={dominantClass}
                   showHistorical={true}
@@ -1161,7 +1199,6 @@ export function Tab4Market() {
           <>
             {/* Single mode / no portfolio: original layout */}
             {primaryBenchmark && (() => {
-              const bCurrency = primaryBenchmark.currency ?? "USD";
               return (
                 <div className="grid grid-cols-3 gap-3 mb-5">
                   {(["luxury-upper-upscale", "upscale-upper-midscale", "midscale-economy"] as const).map((key) => (
@@ -1171,6 +1208,7 @@ export function Tab4Market() {
                       metrics={primaryBenchmark.byClass[key]}
                       currency={bCurrency}
                       highlighted={key === costarClassKey}
+                      yoy={computeSegmentYoY(primaryBenchmark.byClassHistorical?.[key])}
                     />
                   ))}
                 </div>
@@ -1179,20 +1217,40 @@ export function Tab4Market() {
 
             {/* 3-metric comparison */}
             {(() => {
-              const bCurrency = primaryBenchmark?.currency ?? "USD";
-              const propCurrency = inputs.currency;
+              const showOriginal = needsCurrencyConversion;
               return (
             <div className="grid grid-cols-3 gap-6 mb-6">
               {[
-                { label: "ADR vs. Market", current: formatCurrency(effectiveInputs.currentADR, propCurrency), bench: formatCurrency(benchmarkADR, bCurrency), delta: adrVsBenchmark },
-                { label: "Occupancy vs. Market", current: `${Math.round(effectiveInputs.currentOccupancy * 100)}%`, bench: `${Math.round(benchmarkOcc * 100)}%`, delta: occVsBenchmark },
-                { label: "RevPAR vs. Market", current: formatCurrency(currentRevPAR, propCurrency), bench: formatCurrency(benchmarkRevPAR, bCurrency), delta: revParVsBenchmark },
-              ].map(({ label, current, bench: b, delta }) => (
+                {
+                  label: "ADR vs. Market",
+                  current: formatCurrency(propADRConverted, bCurrency),
+                  original: showOriginal ? formatCurrency(effectiveInputs.currentADR, propCurrency) : null,
+                  bench: formatCurrency(benchmarkADR, bCurrency),
+                  delta: adrVsBenchmark,
+                },
+                {
+                  label: "Occupancy vs. Market",
+                  current: `${Math.round(effectiveInputs.currentOccupancy * 100)}%`,
+                  original: null,
+                  bench: `${Math.round(benchmarkOcc * 100)}%`,
+                  delta: occVsBenchmark,
+                },
+                {
+                  label: "RevPAR vs. Market",
+                  current: formatCurrency(propRevPARConverted, bCurrency),
+                  original: showOriginal ? formatCurrency(currentRevPAR, propCurrency) : null,
+                  bench: formatCurrency(benchmarkRevPAR, bCurrency),
+                  delta: revParVsBenchmark,
+                },
+              ].map(({ label, current, original, bench: b, delta }) => (
                 <div key={label} className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
                   <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-3">{label}</p>
                   <div className="flex items-center justify-center gap-6">
                     <div>
                       <p className="text-xl font-serif font-bold text-white">{current}</p>
+                      {original && (
+                        <p className="text-white/25 text-[10px] font-sans">{original}</p>
+                      )}
                       <p className="text-white/30 text-xs font-sans">{isPortfolioMode ? "Portfolio Blended" : "Your Property"}</p>
                     </div>
                     <div className="text-white/20 text-xl">→</div>
