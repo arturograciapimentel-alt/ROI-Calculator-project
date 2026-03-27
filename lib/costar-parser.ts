@@ -179,6 +179,7 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
     id: `costar-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     marketName,
     reportDate,
+    currency: "USD", // CoStar reports are typically in USD; user can override in Tab 4
     overall: overall ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },
     byClass: {
       "luxury-upper-upscale": lux ?? { rooms: 0, occupancy: 0, adr: 0, revpar: 0 },

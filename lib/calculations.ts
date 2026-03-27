@@ -7,6 +7,70 @@ import type {
   Scenario,
 } from "./types";
 
+/**
+ * Approximate reference exchange rates: 1 USD = N units of each currency.
+ * Users can override these in the Exchange Rates panel.
+ */
+export const DEFAULT_EXCHANGE_RATES: Record<string, number> = {
+  USD: 1,
+  EUR: 0.92,
+  GBP: 0.79,
+  MXN: 17.15,
+  CAD: 1.36,
+  AUD: 1.52,
+  JPY: 149.5,
+};
+
+/**
+ * Converts a monetary value from one currency to another using stored exchange rates.
+ * Rates are "units per 1 USD" (e.g., MXN: 17.15 means 1 USD = 17.15 MXN).
+ */
+export function convertCurrency(
+  value: number,
+  from: string,
+  to: string,
+  rates: Record<string, number>
+): number {
+  if (from === to) return value;
+  const fromRate = rates[from] ?? DEFAULT_EXCHANGE_RATES[from] ?? 1;
+  const toRate = rates[to] ?? DEFAULT_EXCHANGE_RATES[to] ?? 1;
+  return (value / fromRate) * toRate;
+}
+
+/**
+ * Returns a copy of PropertyInputs with all monetary values converted to outputCurrency.
+ * Performance fields (ADR, RM costs) are converted from inputs.currency.
+ * Duetto investment fields are converted from inputs.duettoCurrency.
+ * In portfolio mode (isPortfolio=true) all costs are assumed to be in inputs.currency.
+ */
+export function normalizeInputCurrencies(
+  inputs: PropertyInputs,
+  outputCurrency: string,
+  rates: Record<string, number>,
+  isPortfolio = false
+): PropertyInputs {
+  const perfCurrency = inputs.currency;
+  const duettoCurrency = isPortfolio ? inputs.currency : (inputs.duettoCurrency || inputs.currency);
+
+  const cp = (v: number) => convertCurrency(v, perfCurrency, outputCurrency, rates);
+  const cd = (v: number) => convertCurrency(v, duettoCurrency, outputCurrency, rates);
+
+  return {
+    ...inputs,
+    currentADR: cp(inputs.currentADR),
+    annualRMSystemsCost: cp(inputs.annualRMSystemsCost || 0),
+    annualConsultingCost: cp(inputs.annualConsultingCost || 0),
+    cpor: cp(inputs.cpor || 0),
+    subscriptionCost: inputs.subscriptionCost ? cd(inputs.subscriptionCost) : 0,
+    implementationFee: cd(inputs.implementationFee || 0),
+    ohipConnectivityFee: cd(inputs.ohipConnectivityFee || 0),
+    duettoAnnualCost: inputs.duettoAnnualCost ? cd(inputs.duettoAnnualCost) : 0,
+    // Tell formatCurrency to use the output currency
+    currency: outputCurrency as PropertyInputs["currency"],
+    duettoCurrency: outputCurrency as PropertyInputs["currency"],
+  };
+}
+
 export const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   EUR: "€",
@@ -262,6 +326,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   starRating: 4,
   location: "New York, NY",
   currency: "USD",
+  duettoCurrency: "USD",
   currentADR: 189,
   currentOccupancy: 0.72,
   groupBusinessPercent: 0.35,

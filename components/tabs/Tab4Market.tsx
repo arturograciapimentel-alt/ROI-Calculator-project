@@ -5,8 +5,18 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs } from "@/lib/calculations";
-import type { CoStarBenchmark, CoStarClassMetrics, DuettoMarketHotel } from "@/lib/types";
+import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs, CURRENCY_SYMBOLS } from "@/lib/calculations";
+import type { CoStarBenchmark, CoStarClassMetrics, Currency, DuettoMarketHotel } from "@/lib/types";
+
+const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "MXN", label: "MXN (MX$)" },
+  { value: "CAD", label: "CAD (CA$)" },
+  { value: "AUD", label: "AUD (A$)" },
+  { value: "JPY", label: "JPY (¥)" },
+];
 import { clsx } from "clsx";
 
 // ─── Static fallback benchmarks ───────────────────────────────────────────────
@@ -300,11 +310,13 @@ function MarketRow({
   benchmark,
   propertyCount,
   onRemove,
+  onCurrencyChange,
   warnings,
 }: {
   benchmark: CoStarBenchmark;
   propertyCount: number;
   onRemove: () => void;
+  onCurrencyChange: (currency: Currency) => void;
   warnings: string[];
 }) {
   return (
@@ -325,6 +337,19 @@ function MarketRow({
             <span className="ml-2 text-amber-400">{warnings.length} field{warnings.length > 1 ? "s" : ""} not parsed</span>
           )}
         </p>
+      </div>
+      {/* Market report currency */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-white/25 text-[10px] font-sans">Report currency:</span>
+        <select
+          value={benchmark.currency ?? "USD"}
+          onChange={(e) => onCurrencyChange(e.target.value as Currency)}
+          className="bg-navy-800/60 border border-white/10 rounded px-2 py-1 text-white/70 text-[10px] font-sans focus:outline-none focus:border-emerald-brand/40 cursor-pointer"
+        >
+          {CURRENCY_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
       </div>
       <button
         onClick={onRemove}
@@ -601,7 +626,6 @@ function MarketDetailCard({
       <DuettoClientHotelsSection
         benchmarkId={benchmarkId}
         marketName={benchmark.marketName}
-        currency={currency}
         costarYoY={computeCoStarYoY(benchmark)}
       />
     </div>
@@ -860,18 +884,17 @@ function AggregateCard({
 function DuettoClientHotelsSection({
   benchmarkId,
   marketName,
-  currency,
   costarYoY = null,
 }: {
   benchmarkId: string;
   marketName: string;
-  currency: string;
   costarYoY?: number | null;
 }) {
-  const { duettoMarketData, setDuettoHotelCount, updateDuettoHotel } = useCalculatorStore();
+  const { duettoMarketData, setDuettoHotelCount, updateDuettoHotel, updateDuettoMarketCurrency } = useCalculatorStore();
   const marketData = duettoMarketData.find((d) => d.costarBenchmarkId === benchmarkId);
   const hotels = marketData?.hotels ?? [];
   const hotelCount = hotels.length;
+  const currency = marketData?.currency ?? "USD";
 
   const hasAnyData = hotels.some(
     (h) => h.currentRoomNights > 0 || h.currentADR > 0 || h.currentRevPAR > 0
@@ -891,7 +914,20 @@ function DuettoClientHotelsSection({
             12-month production data from same-market Duetto hotels
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Hotel data currency selector */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-white/25 text-[10px] font-sans whitespace-nowrap">Data currency:</span>
+            <select
+              value={currency}
+              onChange={(e) => updateDuettoMarketCurrency(benchmarkId, e.target.value as Currency)}
+              className="bg-navy-800/60 border border-white/10 rounded px-2 py-1 text-white/70 text-[10px] font-sans focus:outline-none focus:border-[#7459EE]/40 cursor-pointer"
+            >
+              {CURRENCY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
           <span className="text-white/30 text-[10px] font-sans">Hotels:</span>
           <div className="flex items-center gap-1">
             <button
@@ -953,9 +989,8 @@ export function Tab4Market() {
   const {
     inputs, projections, scenario, costarBenchmarks,
     addCostarBenchmark, removeCostarBenchmark, portfolioProperties,
+    updateCostarBenchmarkCurrency, outputCurrency,
   } = useCalculatorStore();
-
-  const currency = inputs.currency;
   const proj = projections[scenario];
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
@@ -1071,6 +1106,7 @@ export function Tab4Market() {
               benchmark={b}
               propertyCount={propertiesPerBenchmark(b.id).length}
               onRemove={() => removeCostarBenchmark(b.id)}
+              onCurrencyChange={(c) => updateCostarBenchmarkCurrency(b.id, c)}
               warnings={warningsMap[b.id] ?? []}
             />
           ))}
@@ -1112,7 +1148,7 @@ export function Tab4Market() {
                 <MarketDetailCard
                   key={b.id}
                   benchmark={b}
-                  currency={currency}
+                  currency={b.currency ?? "USD"}
                   assignedProperties={assigned}
                   highlightedClass={dominantClass}
                   showHistorical={true}
@@ -1124,26 +1160,33 @@ export function Tab4Market() {
         ) : (
           <>
             {/* Single mode / no portfolio: original layout */}
-            {primaryBenchmark && (
-              <div className="grid grid-cols-3 gap-3 mb-5">
-                {(["luxury-upper-upscale", "upscale-upper-midscale", "midscale-economy"] as const).map((key) => (
-                  <CoStarClassCard
-                    key={key}
-                    label={PROPERTY_TYPE_LABELS[key]}
-                    metrics={primaryBenchmark.byClass[key]}
-                    currency={currency}
-                    highlighted={key === costarClassKey}
-                  />
-                ))}
-              </div>
-            )}
+            {primaryBenchmark && (() => {
+              const bCurrency = primaryBenchmark.currency ?? "USD";
+              return (
+                <div className="grid grid-cols-3 gap-3 mb-5">
+                  {(["luxury-upper-upscale", "upscale-upper-midscale", "midscale-economy"] as const).map((key) => (
+                    <CoStarClassCard
+                      key={key}
+                      label={PROPERTY_TYPE_LABELS[key]}
+                      metrics={primaryBenchmark.byClass[key]}
+                      currency={bCurrency}
+                      highlighted={key === costarClassKey}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* 3-metric comparison */}
+            {(() => {
+              const bCurrency = primaryBenchmark?.currency ?? "USD";
+              const propCurrency = inputs.currency;
+              return (
             <div className="grid grid-cols-3 gap-6 mb-6">
               {[
-                { label: "ADR vs. Market", current: formatCurrency(effectiveInputs.currentADR, currency), bench: formatCurrency(benchmarkADR, currency), delta: adrVsBenchmark },
+                { label: "ADR vs. Market", current: formatCurrency(effectiveInputs.currentADR, propCurrency), bench: formatCurrency(benchmarkADR, bCurrency), delta: adrVsBenchmark },
                 { label: "Occupancy vs. Market", current: `${Math.round(effectiveInputs.currentOccupancy * 100)}%`, bench: `${Math.round(benchmarkOcc * 100)}%`, delta: occVsBenchmark },
-                { label: "RevPAR vs. Market", current: formatCurrency(currentRevPAR, currency), bench: formatCurrency(benchmarkRevPAR, currency), delta: revParVsBenchmark },
+                { label: "RevPAR vs. Market", current: formatCurrency(currentRevPAR, propCurrency), bench: formatCurrency(benchmarkRevPAR, bCurrency), delta: revParVsBenchmark },
               ].map(({ label, current, bench: b, delta }) => (
                 <div key={label} className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
                   <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-3">{label}</p>
@@ -1164,6 +1207,8 @@ export function Tab4Market() {
                 </div>
               ))}
             </div>
+              );
+            })()}
 
             {/* Radar + context */}
             <div className="grid grid-cols-2 gap-6">
@@ -1219,11 +1264,13 @@ export function Tab4Market() {
 
             {/* Historical charts for primary market */}
             {primaryBenchmark && primaryBenchmark.historical.length > 0 && (
-              <HistoricalCharts benchmark={primaryBenchmark} currency={currency} />
+              <HistoricalCharts benchmark={primaryBenchmark} currency={primaryBenchmark.currency ?? "USD"} />
             )}
 
             {/* Submarket table for primary market */}
-            {primaryBenchmark && primaryBenchmark.submarkets.length > 0 && (
+            {primaryBenchmark && primaryBenchmark.submarkets.length > 0 ? (() => {
+              const bCur = primaryBenchmark.currency ?? "USD";
+              return (
               <div className="mt-5 pt-5 border-t border-white/8">
                 <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-3">
                   Submarket Breakdown — {primaryBenchmark.marketName}
@@ -1243,28 +1290,28 @@ export function Tab4Market() {
                         <tr key={sm.name} className="border-t border-white/5 hover:bg-white/3 transition-colors">
                           <td className="py-2 pr-4 text-white/60">{sm.name}</td>
                           <td className="text-right py-2 px-3 text-white/80">{Math.round(sm.occupancy * 100)}%</td>
-                          <td className="text-right py-2 px-3 text-white/80">{formatCurrency(sm.adr, currency)}</td>
-                          <td className="text-right py-2 pl-3 font-semibold text-white">{formatCurrency(sm.revpar, currency)}</td>
+                          <td className="text-right py-2 px-3 text-white/80">{formatCurrency(sm.adr, bCur)}</td>
+                          <td className="text-right py-2 pl-3 font-semibold text-white">{formatCurrency(sm.revpar, bCur)}</td>
                         </tr>
                       ))}
                       <tr className="border-t border-white/15">
                         <td className="py-2 pr-4 text-gold-400 font-semibold">Market Total</td>
                         <td className="text-right py-2 px-3 text-gold-400 font-semibold">{Math.round(primaryBenchmark.overall.occupancy * 100)}%</td>
-                        <td className="text-right py-2 px-3 text-gold-400 font-semibold">{formatCurrency(primaryBenchmark.overall.adr, currency)}</td>
-                        <td className="text-right py-2 pl-3 text-gold-400 font-semibold">{formatCurrency(primaryBenchmark.overall.revpar, currency)}</td>
+                        <td className="text-right py-2 px-3 text-gold-400 font-semibold">{formatCurrency(primaryBenchmark.overall.adr, bCur)}</td>
+                        <td className="text-right py-2 pl-3 text-gold-400 font-semibold">{formatCurrency(primaryBenchmark.overall.revpar, bCur)}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
+              );
+            })() : null}
 
             {/* Duetto client hotels — single-mode (tied to primary benchmark) */}
             {primaryBenchmark && (
               <DuettoClientHotelsSection
                 benchmarkId={primaryBenchmark.id}
                 marketName={primaryBenchmark.marketName}
-                currency={currency}
                 costarYoY={computeCoStarYoY(primaryBenchmark)}
               />
             )}
@@ -1284,7 +1331,7 @@ export function Tab4Market() {
             <div className="text-center p-5 rounded-xl bg-[#FF5900]/8 border border-[#FF5900]/20">
               <p className="text-[#FF5900] text-xs font-sans uppercase tracking-wider mb-2">Monthly Opportunity Cost</p>
               <p className="text-3xl font-serif font-bold text-[#FF5900]">
-                <RunningCounter target={monthlyOpportunityCost} currency={currency} />
+                <RunningCounter target={monthlyOpportunityCost} currency={outputCurrency} />
               </p>
               <p className="text-white/30 text-xs font-sans mt-1">Unrealized revenue/month</p>
             </div>
@@ -1309,7 +1356,7 @@ export function Tab4Market() {
                 ))}
               </div>
               <div className="text-4xl font-serif font-bold text-[#FF5900]">
-                {formatCurrency(monthlyOpportunityCost * delayMonths, currency, true)}
+                {formatCurrency(monthlyOpportunityCost * delayMonths, outputCurrency, true)}
               </div>
               <p className="text-white/30 text-xs font-sans mt-1">
                 in unrealized revenue over {delayMonths} months of inaction

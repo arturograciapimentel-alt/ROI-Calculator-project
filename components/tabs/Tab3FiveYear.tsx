@@ -6,7 +6,18 @@ import {
   ComposedChart, Line,
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { InputField, SliderInput } from "@/components/ui/InputField";
+import { InputField, SliderInput, SelectInput } from "@/components/ui/InputField";
+import type { Currency } from "@/lib/types";
+
+const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "MXN", label: "MXN (MX$)" },
+  { value: "CAD", label: "CAD (CA$)" },
+  { value: "AUD", label: "AUD (A$)" },
+  { value: "JPY", label: "JPY (¥)" },
+];
 import { formatCurrency, formatPercent, estimateDuettoCost, computeDuettoAnnualCost, computeDuettoYearlyCosts, aggregatePortfolioInputs } from "@/lib/calculations";
 import { clsx } from "clsx";
 
@@ -26,8 +37,8 @@ function CalloutBadge({ label, value, sub }: { label: string; value: string; sub
 }
 
 export function Tab3FiveYear() {
-  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, capRate, setCapRate, portfolioProperties } = useCalculatorStore();
-  const currency = inputs.currency;
+  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, capRate, setCapRate, portfolioProperties, outputCurrency, setOutputCurrency } = useCalculatorStore();
+  const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
   const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
@@ -109,11 +120,25 @@ export function Tab3FiveYear() {
   return (
     <div className="space-y-8 tab-content-enter">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-serif font-bold text-white">5-Year Financial Projection</h2>
-        <p className="text-white/40 text-sm font-sans mt-1">
-          Long-term compounding value — the strategic case for asset managers and owners
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-serif font-bold text-white">5-Year Financial Projection</h2>
+          <p className="text-white/40 text-sm font-sans mt-1">
+            Long-term compounding value — the strategic case for asset managers and owners
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-white/30 text-xs font-sans whitespace-nowrap">Display in</span>
+          <SelectInput
+            value={outputCurrency}
+            onChange={(e) => setOutputCurrency(e.target.value as Currency)}
+            className="w-32 text-xs"
+          >
+            {CURRENCY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </SelectInput>
+        </div>
       </div>
 
       {/* Key callout cards */}

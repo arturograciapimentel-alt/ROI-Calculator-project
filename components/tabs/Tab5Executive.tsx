@@ -13,6 +13,17 @@ import {
   RM_APPROACH_LABELS,
 } from "@/lib/calculations";
 import { clsx } from "clsx";
+import type { Currency } from "@/lib/types";
+
+const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "MXN", label: "MXN (MX$)" },
+  { value: "CAD", label: "CAD (CA$)" },
+  { value: "AUD", label: "AUD (A$)" },
+  { value: "JPY", label: "JPY (¥)" },
+];
 
 const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
@@ -20,12 +31,13 @@ export function Tab5Executive() {
   const {
     inputs, projections, scenario, yearlyProjections, capRate,
     preparedBy, nextSteps, setPreparedBy, setNextSteps, portfolioProperties,
+    outputCurrency, setOutputCurrency,
   } = useCalculatorStore();
 
   const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const currency = inputs.currency;
+  const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
   const proj = projections.moderate;
@@ -124,6 +136,18 @@ export function Tab5Executive() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-white/30 text-xs font-sans whitespace-nowrap">Display in</span>
+            <select
+              value={outputCurrency}
+              onChange={(e) => setOutputCurrency(e.target.value as Currency)}
+              className="bg-navy-800/80 border border-white/15 rounded-lg px-3 py-2 text-white text-xs font-sans focus:outline-none focus:border-gold-500/50 w-32"
+            >
+              {CURRENCY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-sans hover:bg-white/15 transition-all"

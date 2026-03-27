@@ -4,10 +4,20 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { InputField, SliderInput } from "@/components/ui/InputField";
+import { InputField, SliderInput, SelectInput } from "@/components/ui/InputField";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { formatCurrency, formatPercent, computeDuettoAnnualCost, aggregatePortfolioInputs } from "@/lib/calculations";
-import type { Scenario, ScenarioAssumptions } from "@/lib/types";
+import type { Currency, Scenario, ScenarioAssumptions } from "@/lib/types";
+
+const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "MXN", label: "MXN (MX$)" },
+  { value: "CAD", label: "CAD (CA$)" },
+  { value: "AUD", label: "AUD (A$)" },
+  { value: "JPY", label: "JPY (¥)" },
+];
 import { clsx } from "clsx";
 
 const SCENARIO_COLORS: Record<Scenario, string> = {
@@ -68,9 +78,9 @@ function ExplanationCard({ title, body, color = "gold" }: ExplanationCardProps) 
 }
 
 export function Tab2ROIProjection() {
-  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties, marketSignalApplied } = useCalculatorStore();
+  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties, marketSignalApplied, outputCurrency, setOutputCurrency } = useCalculatorStore();
   const proj = projections[scenario];
-  const currency = inputs.currency;
+  const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
   const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
@@ -96,11 +106,25 @@ export function Tab2ROIProjection() {
   return (
     <div className="space-y-8 tab-content-enter">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-serif font-bold text-white">ROI Projection Engine</h2>
-        <p className="text-white/40 text-sm font-sans mt-1">
-          Adjust scenario assumptions and see your projected RevPAR impact update in real time
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-serif font-bold text-white">ROI Projection Engine</h2>
+          <p className="text-white/40 text-sm font-sans mt-1">
+            Adjust scenario assumptions and see your projected RevPAR impact update in real time
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-white/30 text-xs font-sans whitespace-nowrap">Display in</span>
+          <SelectInput
+            value={outputCurrency}
+            onChange={(e) => setOutputCurrency(e.target.value as Currency)}
+            className="w-32 text-xs"
+          >
+            {CURRENCY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </SelectInput>
+        </div>
       </div>
 
       {/* Scenario Toggle */}

@@ -37,7 +37,10 @@ export interface PropertyInputs {
   totalRooms: number;
   starRating: number;
   location: string;
+  /** Currency for performance metrics: ADR, RM systems cost, consulting cost */
   currency: Currency;
+  /** Currency for Duetto investment fields: subscription, implementation fee, OHIP */
+  duettoCurrency: Currency;
 
   // Current Performance
   currentADR: number;
@@ -139,6 +142,8 @@ export interface CoStarBenchmark {
   id: string;
   marketName: string;
   reportDate: string;
+  /** Currency of the ADR/RevPAR values in this report (default: USD) */
+  currency: Currency;
   overall: CoStarClassMetrics;
   byClass: {
     "luxury-upper-upscale": CoStarClassMetrics;
@@ -169,6 +174,8 @@ export interface DuettoMarketHotel {
 export interface DuettoMarketData {
   costarBenchmarkId: string;
   hotels: DuettoMarketHotel[];
+  /** Currency of the ADR/RevPAR values entered for these hotels (default: USD) */
+  currency: Currency;
 }
 
 export interface CalculatorState {
@@ -194,4 +201,8 @@ export interface CalculatorState {
   costarBenchmarks: CoStarBenchmark[];
   duettoMarketData: DuettoMarketData[];
   marketSignalApplied: boolean;
+  /** Currency used for all ROI output display (Tabs 2, 3, 5) */
+  outputCurrency: Currency;
+  /** Exchange rates relative to USD: 1 USD = N units of currency */
+  exchangeRates: Record<Currency, number>;
 }

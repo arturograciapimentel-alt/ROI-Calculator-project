@@ -19,7 +19,10 @@ import {
   computeDuettoAnnualCost,
   aggregatePortfolioInputs,
   createPortfolioProperty,
+  DEFAULT_EXCHANGE_RATES,
+  normalizeInputCurrencies,
 } from "@/lib/calculations";
+import type { Currency } from "@/lib/types";
 
 type CalculatorStore = CalculatorState & {
   setActiveTab: (tab: number) => void;
@@ -38,11 +41,15 @@ type CalculatorStore = CalculatorState & {
   setNextSteps: (steps: string) => void;
   addCostarBenchmark: (data: CoStarBenchmark) => void;
   removeCostarBenchmark: (id: string) => void;
+  updateCostarBenchmarkCurrency: (id: string, currency: Currency) => void;
   setPortfolioProperties: (props: PortfolioProperty[]) => void;
   updatePortfolioProperty: (id: string, updates: Partial<Omit<PortfolioProperty, "id">>) => void;
   setDuettoHotelCount: (benchmarkId: string, count: number) => void;
   updateDuettoHotel: (benchmarkId: string, hotelId: string, updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
+  updateDuettoMarketCurrency: (benchmarkId: string, currency: Currency) => void;
   applyMarketSignal: (conservative: number, moderate: number, aggressive: number) => void;
+  setOutputCurrency: (currency: Currency) => void;
+  updateExchangeRate: (currency: Currency, rate: number) => void;
 };
 
 const DEFAULT_INPUTS: PropertyInputs = {
@@ -52,6 +59,7 @@ const DEFAULT_INPUTS: PropertyInputs = {
   starRating: 4,
   location: "",
   currency: "USD",
+  duettoCurrency: "USD",
   currentADR: 150,
   currentOccupancy: 0.70,
   groupBusinessPercent: 0.20,
@@ -93,16 +101,22 @@ function recalculate(
   assumptions: CalculatorState["assumptions"],
   hourlyLaborRate: number,
   capRate: number,
-  portfolioProperties: PortfolioProperty[] = []
+  portfolioProperties: PortfolioProperty[] = [],
+  outputCurrency: Currency = "USD",
+  exchangeRates: Record<string, number> = DEFAULT_EXCHANGE_RATES
 ) {
   // When portfolio mode is active, aggregate per-property data into blended inputs
-  const baseInputs = portfolioProperties.length >= 2
+  const isPortfolio = portfolioProperties.length >= 2;
+  const baseInputs = isPortfolio
     ? aggregatePortfolioInputs(inputs, portfolioProperties)
     : inputs;
 
   // Derive annual recurring cost from breakdown fields; fall back to auto-estimate
   const duettoAnnualCost = computeDuettoAnnualCost(baseInputs);
-  const effectiveInputs = { ...baseInputs, duettoAnnualCost };
+  const withCost = { ...baseInputs, duettoAnnualCost };
+
+  // Normalize all monetary values to outputCurrency before calculation
+  const effectiveInputs = normalizeInputCurrencies(withCost, outputCurrency, exchangeRates, isPortfolio);
 
   const projections = {
     conservative: calculateROI(effectiveInputs, assumptions.conservative, hourlyLaborRate),
@@ -127,6 +141,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
       portfolioProperties: [],
       scenario: "moderate",
       marketSignalApplied: false,
+      outputCurrency: "USD",
+      exchangeRates: { ...DEFAULT_EXCHANGE_RATES } as Record<Currency, number>,
       assumptions: {
         conservative: { ...DEFAULT_ASSUMPTIONS.conservative },
         moderate: { ...DEFAULT_ASSUMPTIONS.moderate },
@@ -184,7 +200,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          portfolioProperties
+          portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         // Keep inputs.duettoAnnualCost in sync with the derived value (single-property mode only)
         const syncedInputs = portfolioProperties.length < 2
@@ -209,7 +227,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          state.portfolioProperties
+          state.portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ assumptions, projections, yearlyProjections, marketSignalApplied: false });
       },
@@ -226,11 +246,12 @@ export const useCalculatorStore = create<CalculatorStore>()(
           assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          state.portfolioProperties
+          state.portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ assumptions, projections, yearlyProjections, marketSignalApplied: true });
       },
-
 
       loadSampleData: () => {
         const state = get();
@@ -240,7 +261,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          []
+          [],
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ inputs: { ...inputs, duettoAnnualCost }, portfolioProperties: [], projections, yearlyProjections });
       },
@@ -252,7 +275,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          []
+          [],
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ inputs: { ...DEFAULT_INPUTS, duettoAnnualCost }, portfolioProperties: [], projections, yearlyProjections });
       },
@@ -265,7 +290,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           state.hourlyLaborRate,
           capRate,
-          state.portfolioProperties
+          state.portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ projections, yearlyProjections });
       },
@@ -277,7 +304,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           hourlyLaborRate,
           state.capRate,
-          state.portfolioProperties
+          state.portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ hourlyLaborRate, projections, yearlyProjections });
       },
@@ -292,7 +321,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          portfolioProperties
+          portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ inputs, portfolioProperties, projections, yearlyProjections });
       },
@@ -307,7 +338,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.assumptions,
           state.hourlyLaborRate,
           state.capRate,
-          portfolioProperties
+          portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates
         );
         set({ portfolioProperties, projections, yearlyProjections });
       },
@@ -340,6 +373,14 @@ export const useCalculatorStore = create<CalculatorStore>()(
         set({ costarBenchmarks, portfolioProperties, duettoMarketData });
       },
 
+      updateCostarBenchmarkCurrency: (id, currency) => {
+        const state = get();
+        const costarBenchmarks = state.costarBenchmarks.map((b) =>
+          b.id === id ? { ...b, currency } : b
+        );
+        set({ costarBenchmarks });
+      },
+
       setDuettoHotelCount: (benchmarkId, count) => {
         const state = get();
         const existing = state.duettoMarketData.find((d) => d.costarBenchmarkId === benchmarkId);
@@ -355,7 +396,11 @@ export const useCalculatorStore = create<CalculatorStore>()(
         } else {
           hotels = currentHotels.slice(0, count);
         }
-        const entry: DuettoMarketData = { costarBenchmarkId: benchmarkId, hotels };
+        const entry: DuettoMarketData = {
+          costarBenchmarkId: benchmarkId,
+          hotels,
+          currency: existing?.currency ?? "USD",
+        };
         const duettoMarketData = existing
           ? state.duettoMarketData.map((d) => (d.costarBenchmarkId === benchmarkId ? entry : d))
           : [...state.duettoMarketData, entry];
@@ -373,6 +418,43 @@ export const useCalculatorStore = create<CalculatorStore>()(
         });
         set({ duettoMarketData });
       },
+
+      updateDuettoMarketCurrency: (benchmarkId, currency) => {
+        const state = get();
+        const duettoMarketData = state.duettoMarketData.map((d) =>
+          d.costarBenchmarkId === benchmarkId ? { ...d, currency } : d
+        );
+        set({ duettoMarketData });
+      },
+
+      setOutputCurrency: (outputCurrency) => {
+        const state = get();
+        const { projections, yearlyProjections } = recalculate(
+          state.inputs,
+          state.assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          state.portfolioProperties,
+          outputCurrency,
+          state.exchangeRates
+        );
+        set({ outputCurrency, projections, yearlyProjections });
+      },
+
+      updateExchangeRate: (currency, rate) => {
+        const state = get();
+        const exchangeRates = { ...state.exchangeRates, [currency]: rate };
+        const { projections, yearlyProjections } = recalculate(
+          state.inputs,
+          state.assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          state.portfolioProperties,
+          state.outputCurrency,
+          exchangeRates
+        );
+        set({ exchangeRates, projections, yearlyProjections });
+      },
     }),
     {
       name: "duetto-roi-calculator",
@@ -386,6 +468,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
         preparedBy: state.preparedBy,
         nextSteps: state.nextSteps,
         duettoMarketData: state.duettoMarketData,
+        outputCurrency: state.outputCurrency,
+        exchangeRates: state.exchangeRates,
+        costarBenchmarks: state.costarBenchmarks,
       }),
     }
   )

@@ -1,11 +1,146 @@
 "use client";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, TextInput, SelectInput, SliderInput, StarRating } from "@/components/ui/InputField";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost, isOperaCloud, computeDuettoAnnualCost } from "@/lib/calculations";
-import type { CoStarBenchmark, PortfolioProperty, PropertyInputs, PropertyType } from "@/lib/types";
+import { formatCurrency, CURRENCY_SYMBOLS, estimateDuettoCost, isOperaCloud, computeDuettoAnnualCost, DEFAULT_EXCHANGE_RATES } from "@/lib/calculations";
+import type { CoStarBenchmark, Currency, PortfolioProperty, PropertyInputs, PropertyType } from "@/lib/types";
+
+const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
+  { value: "USD", label: "USD — US Dollar ($)" },
+  { value: "EUR", label: "EUR — Euro (€)" },
+  { value: "GBP", label: "GBP — British Pound (£)" },
+  { value: "MXN", label: "MXN — Mexican Peso (MX$)" },
+  { value: "CAD", label: "CAD — Canadian Dollar (CA$)" },
+  { value: "AUD", label: "AUD — Australian Dollar (A$)" },
+  { value: "JPY", label: "JPY — Japanese Yen (¥)" },
+];
+
+function CurrencySelect({ value, onChange }: { value: Currency; onChange: (v: Currency) => void }) {
+  return (
+    <SelectInput value={value} onChange={(e) => onChange(e.target.value as Currency)}>
+      {CURRENCY_OPTIONS.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </SelectInput>
+  );
+}
+
+function ExchangeRatesPanel() {
+  const { inputs, exchangeRates, updateExchangeRate, outputCurrency } = useCalculatorStore();
+  const [open, setOpen] = useState(false);
+
+  // Only show currencies that are actually in use
+  const activeCurrencies = Array.from(new Set([
+    inputs.currency,
+    inputs.duettoCurrency,
+    outputCurrency,
+  ])).filter((c) => c !== "USD");
+
+  // If everything is USD (or only one currency), no conversion is needed
+  const allSameCurrency =
+    inputs.currency === inputs.duettoCurrency &&
+    inputs.currency === outputCurrency;
+
+  if (allSameCurrency) return null;
+
+  return (
+    <div className="glass-card rounded-2xl border border-white/8 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/3 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 rounded-lg bg-[#7459EE]/15 text-[#7459EE]">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 4v8m0 0l4-4m-4 4l-4-4" />
+            </svg>
+          </div>
+          <div className="text-left">
+            <p className="text-white/80 text-sm font-sans font-medium">Exchange Rates</p>
+            <p className="text-white/35 text-xs font-sans">
+              {activeCurrencies.length > 0
+                ? `Rates in use: ${activeCurrencies.join(", ")} ↔ USD — click to verify or override`
+                : "Approximate reference rates — click to verify or override"}
+            </p>
+          </div>
+        </div>
+        <svg
+          className={`w-4 h-4 text-white/30 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="px-6 pb-5 border-t border-white/8">
+          <p className="text-white/30 text-[11px] font-sans mt-4 mb-4">
+            Rates are expressed as <strong className="text-white/50">1 USD = N units</strong> of each currency.
+            Calculations convert all monetary inputs to the output currency using these rates.
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {(Object.keys(DEFAULT_EXCHANGE_RATES) as Currency[])
+              .filter((c) => c !== "USD")
+              .map((c) => {
+                const currentRate = exchangeRates[c] ?? DEFAULT_EXCHANGE_RATES[c] ?? 1;
+                const defaultRate = DEFAULT_EXCHANGE_RATES[c];
+                const isActive = [inputs.currency, inputs.duettoCurrency, outputCurrency].includes(c);
+                return (
+                  <div
+                    key={c}
+                    className={`p-3 rounded-xl border transition-all ${
+                      isActive
+                        ? "border-[#7459EE]/30 bg-[#7459EE]/5"
+                        : "border-white/8 bg-navy-800/40 opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-sans font-semibold text-white/70">
+                        {CURRENCY_SYMBOLS[c]} {c}
+                      </span>
+                      {isActive && (
+                        <span className="text-[9px] bg-[#7459EE]/20 text-[#7459EE] px-1.5 py-0.5 rounded-full font-sans">
+                          active
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-white/30 text-[10px] font-sans">1 USD =</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.001"
+                        value={currentRate}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (v > 0) updateExchangeRate(c, v);
+                        }}
+                        className="flex-1 min-w-0 bg-navy-800/80 border border-white/10 rounded px-2 py-1 text-white text-xs font-sans text-right focus:outline-none focus:border-[#7459EE]/50"
+                      />
+                    </div>
+                    {Math.abs(currentRate - defaultRate) / defaultRate > 0.01 && (
+                      <button
+                        onClick={() => updateExchangeRate(c, defaultRate)}
+                        className="mt-1.5 text-[9px] text-white/25 hover:text-white/50 font-sans"
+                      >
+                        Reset to ~{defaultRate}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+          <p className="text-white/20 text-[10px] font-sans mt-3">
+            Reference rates are approximate. For precise calculations, enter the current interbank rate.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProfileCompleteness({ inputs }: { inputs: PropertyInputs }) {
   const fields = [
@@ -230,6 +365,8 @@ export function Tab1PropertyProfile() {
     updatePortfolioProperty,
     setPortfolioProperties,
     costarBenchmarks,
+    outputCurrency,
+    setOutputCurrency,
   } = useCalculatorStore();
 
   const sym = CURRENCY_SYMBOLS[inputs.currency] || "$";
@@ -378,19 +515,14 @@ export function Tab1PropertyProfile() {
             </InputField>
           )}
 
-          <InputField label="Currency">
-            <SelectInput
+          <InputField
+            label="Performance Metrics Currency"
+            tooltip="Currency of your performance inputs: ADR, RM systems cost, and consulting cost. This is the currency your property data is reported in."
+          >
+            <CurrencySelect
               value={inputs.currency}
-              onChange={(e) => update("currency", e.target.value as PropertyInputs["currency"])}
-            >
-              <option value="USD">USD — US Dollar ($)</option>
-              <option value="EUR">EUR — Euro (€)</option>
-              <option value="GBP">GBP — British Pound (£)</option>
-              <option value="MXN">MXN — Mexican Peso</option>
-              <option value="CAD">CAD — Canadian Dollar</option>
-              <option value="AUD">AUD — Australian Dollar</option>
-              <option value="JPY">JPY — Japanese Yen (¥)</option>
-            </SelectInput>
+              onChange={(v) => update("currency", v)}
+            />
           </InputField>
 
           <InputField label="Star Rating">
@@ -651,6 +783,8 @@ export function Tab1PropertyProfile() {
         const sectionNum = isPortfolioMode ? 5 : 4;
         const autoSubEstimate = estimateDuettoCost(inputs.totalRooms);
         const showOhip = isOperaCloud(inputs.pmsName || "");
+        const duettoCurrency = inputs.duettoCurrency || inputs.currency;
+        const duettoSym = CURRENCY_SYMBOLS[duettoCurrency] || "$";
         const effectiveSubscription = inputs.subscriptionCost > 0 ? inputs.subscriptionCost : autoSubEstimate;
         const effectiveOhip = showOhip ? (inputs.ohipConnectivityFee || 0) : 0;
         const annualRecurring = effectiveSubscription + effectiveOhip;
@@ -658,11 +792,24 @@ export function Tab1PropertyProfile() {
         const contractYears = inputs.initialContractYears || 1;
         return (
           <div className="glass-card rounded-2xl p-6 border border-white/8">
-            <SectionHeader
-              number={sectionNum}
-              title="Duetto Investment"
-              subtitle="Cost breakdown used across all ROI projections and the 5-year model"
-            />
+            <div className="flex items-start justify-between mb-5">
+              <SectionHeader
+                number={sectionNum}
+                title="Duetto Investment"
+                subtitle="Cost breakdown used across all ROI projections and the 5-year model"
+              />
+              <div className="flex-shrink-0 ml-4 w-56">
+                <InputField
+                  label="Investment Currency"
+                  tooltip="Currency for Duetto subscription, implementation fee, and OHIP. Duetto pricing is typically quoted in USD or EUR."
+                >
+                  <CurrencySelect
+                    value={duettoCurrency}
+                    onChange={(v) => update("duettoCurrency", v)}
+                  />
+                </InputField>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-5">
               {/* PMS */}
               <InputField
@@ -693,28 +840,28 @@ export function Tab1PropertyProfile() {
 
               {/* Subscription cost */}
               <InputField
-                label={`Annual Subscription Cost — ${sym}`}
-                tooltip={`Recurring annual Duetto subscription fee. Leave 0 to auto-estimate (${formatCurrency(autoSubEstimate, inputs.currency)}/yr for ${inputs.totalRooms} rooms).`}
+                label={`Annual Subscription Cost — ${duettoSym}`}
+                tooltip={`Recurring annual Duetto subscription fee. Leave 0 to auto-estimate (${formatCurrency(autoSubEstimate, duettoCurrency)}/yr for ${inputs.totalRooms} rooms).`}
               >
                 <TextInput
                   type="number"
                   value={inputs.subscriptionCost || ""}
                   onChange={(e) => update("subscriptionCost", parseFloat(e.target.value) || 0)}
-                  prefix={sym}
+                  prefix={duettoSym}
                   placeholder={`${autoSubEstimate.toLocaleString()} (auto)`}
                 />
               </InputField>
 
               {/* Implementation fee */}
               <InputField
-                label={`Implementation Fee — ${sym}`}
+                label={`Implementation Fee — ${duettoSym}`}
                 tooltip="One-time fee charged in Year 1 only. Does not recur in subsequent years."
               >
                 <TextInput
                   type="number"
                   value={inputs.implementationFee || ""}
                   onChange={(e) => update("implementationFee", parseFloat(e.target.value) || 0)}
-                  prefix={sym}
+                  prefix={duettoSym}
                   placeholder="0"
                 />
               </InputField>
@@ -722,14 +869,14 @@ export function Tab1PropertyProfile() {
               {/* OHIP fee — only shown for Opera Cloud */}
               {showOhip && (
                 <InputField
-                  label={`OHIP Connectivity Fee — ${sym}/yr`}
+                  label={`OHIP Connectivity Fee — ${duettoSym}/yr`}
                   tooltip="Annual Oracle Hospitality Integration Platform fee. Applies to Opera Cloud properties only. Recurring every year."
                 >
                   <TextInput
                     type="number"
                     value={inputs.ohipConnectivityFee || ""}
                     onChange={(e) => update("ohipConnectivityFee", parseFloat(e.target.value) || 0)}
-                    prefix={sym}
+                    prefix={duettoSym}
                     placeholder="0"
                   />
                 </InputField>
@@ -740,14 +887,14 @@ export function Tab1PropertyProfile() {
             <div className="mt-5 grid grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
                 <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Year 1 Total Cost</p>
-                <p className="text-xl font-serif font-bold text-[#FF5900]">{formatCurrency(yearOneCost, inputs.currency)}</p>
+                <p className="text-xl font-serif font-bold text-[#FF5900]">{formatCurrency(yearOneCost, duettoCurrency)}</p>
                 <p className="text-white/25 text-[10px] font-sans mt-1">
                   Subscription{inputs.implementationFee > 0 ? " + impl. fee" : ""}{effectiveOhip > 0 ? " + OHIP" : ""}
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
                 <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Annual Recurring Cost</p>
-                <p className="text-xl font-serif font-bold text-white">{formatCurrency(annualRecurring, inputs.currency)}</p>
+                <p className="text-xl font-serif font-bold text-white">{formatCurrency(annualRecurring, duettoCurrency)}</p>
                 <p className="text-white/25 text-[10px] font-sans mt-1">
                   Yrs 2–{contractYears}{effectiveOhip > 0 ? " (incl. OHIP)" : ""}
                 </p>
@@ -755,7 +902,7 @@ export function Tab1PropertyProfile() {
               <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
                 <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Post-Contract Rate</p>
                 <p className="text-xl font-serif font-bold text-gold-400">
-                  {formatCurrency(annualRecurring * 1.05, inputs.currency)}<span className="text-sm text-gold-400/60">/yr</span>
+                  {formatCurrency(annualRecurring * 1.05, duettoCurrency)}<span className="text-sm text-gold-400/60">/yr</span>
                 </p>
                 <p className="text-white/25 text-[10px] font-sans mt-1">
                   +5% p.a. from yr {contractYears + 1}
@@ -765,6 +912,39 @@ export function Tab1PropertyProfile() {
           </div>
         );
       })()}
+
+      {/* Output Currency & Exchange Rates */}
+      <div className="glass-card rounded-2xl p-6 border border-white/8">
+        <SectionHeader
+          number={isPortfolioMode ? 6 : 5}
+          title="Report Output Currency"
+          subtitle="All ROI projections, 5-year model, and executive summary will display in this currency"
+        />
+        <div className="grid grid-cols-2 gap-5">
+          <InputField
+            label="Output / Display Currency"
+            tooltip="The currency used for all projected financial results. Inputs in other currencies are converted automatically using the exchange rates below."
+          >
+            <CurrencySelect value={outputCurrency} onChange={setOutputCurrency} />
+          </InputField>
+          <div className="flex items-end pb-1">
+            {outputCurrency !== inputs.currency || outputCurrency !== (inputs.duettoCurrency || inputs.currency) ? (
+              <p className="text-[#7459EE]/70 text-xs font-sans">
+                Conversions active: {inputs.currency !== outputCurrency && `performance metrics (${inputs.currency} → ${outputCurrency})`}
+                {inputs.currency !== outputCurrency && (inputs.duettoCurrency || inputs.currency) !== outputCurrency && " · "}
+                {(inputs.duettoCurrency || inputs.currency) !== outputCurrency && `Duetto investment (${inputs.duettoCurrency || inputs.currency} → ${outputCurrency})`}
+              </p>
+            ) : (
+              <p className="text-white/25 text-xs font-sans">
+                All inputs are already in {outputCurrency} — no conversion needed
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Exchange Rates — only shown when currencies differ */}
+      <ExchangeRatesPanel />
     </div>
   );
 }
