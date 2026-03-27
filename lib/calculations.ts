@@ -32,8 +32,11 @@ export function convertCurrency(
   rates: Record<string, number>
 ): number {
   if (from === to) return value;
-  const fromRate = rates[from] ?? DEFAULT_EXCHANGE_RATES[from] ?? 1;
-  const toRate = rates[to] ?? DEFAULT_EXCHANGE_RATES[to] ?? 1;
+  if (!isFinite(value) || isNaN(value)) return 0;
+  const fromRateRaw = rates[from] ?? DEFAULT_EXCHANGE_RATES[from] ?? 1;
+  const toRateRaw = rates[to] ?? DEFAULT_EXCHANGE_RATES[to] ?? 1;
+  const fromRate = fromRateRaw > 0 && isFinite(fromRateRaw) ? fromRateRaw : 1;
+  const toRate = toRateRaw > 0 && isFinite(toRateRaw) ? toRateRaw : 1;
   return (value / fromRate) * toRate;
 }
 
@@ -150,7 +153,9 @@ export function calculateROI(
   assumptions: ScenarioAssumptions,
   hourlyLaborRate: number
 ): ROIProjection {
-  const { totalRooms, currentADR, currentOccupancy } = inputs;
+  const { totalRooms } = inputs;
+  const currentADR = isFinite(inputs.currentADR) && inputs.currentADR >= 0 ? inputs.currentADR : 0;
+  const currentOccupancy = isFinite(inputs.currentOccupancy) && inputs.currentOccupancy >= 0 ? inputs.currentOccupancy : 0;
   const currentRevPAR = currentADR * currentOccupancy;
   const annualRooms = totalRooms * 365;
 
@@ -159,12 +164,14 @@ export function calculateROI(
 
   // ── RevPAR-led model ──────────────────────────────────────────────────────
   // Single RevPAR uplift assumption; decomposed into ADR (60%) and occupancy (40%).
-  const revparUplift = assumptions.revparUpliftPercent;
+  const revparUplift = isFinite(assumptions.revparUpliftPercent) ? assumptions.revparUpliftPercent : 0;
 
   // Yieldable-segment new metrics
   const yieldableNewRevPAR = currentRevPAR * (1 + revparUplift);
   const yieldableNewADR    = currentADR * (1 + revparUplift * ADR_SHARE);
-  const yieldableNewOcc    = Math.min(0.98, yieldableNewRevPAR / yieldableNewADR);
+  const yieldableNewOcc    = yieldableNewADR > 0
+    ? Math.min(0.98, yieldableNewRevPAR / yieldableNewADR)
+    : currentOccupancy;
 
   // Incremental revenue on yieldable inventory
   const incrementalADRRevenue = (yieldableNewADR - currentADR) * currentOccupancy * annualRooms * yieldable;

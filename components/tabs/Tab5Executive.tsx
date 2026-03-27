@@ -38,6 +38,7 @@ export function Tab5Executive() {
   } = useCalculatorStore();
 
   const [isExporting, setIsExporting] = useState(false);
+  const [includeFiveYear, setIncludeFiveYear] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   const currency = outputCurrency;
@@ -46,8 +47,18 @@ export function Tab5Executive() {
 
   // Normalize all monetary display values to the selected output currency
   const normalizedInputs = normalizeInputCurrencies(effectiveInputs, currency, exchangeRates, isPortfolioMode);
-  const effectiveCost = computeDuettoAnnualCost(normalizedInputs);
   const currentRevPAR = normalizedInputs.currentADR * normalizedInputs.currentOccupancy;
+
+  // Compute effective Duetto cost in outputCurrency.
+  // estimateDuettoCost() always returns USD, so we must convert from the appropriate source.
+  const duettoCurrencyForConversion = isPortfolioMode
+    ? inputs.currency
+    : (inputs.duettoCurrency || "USD");
+  const rawEffectiveCost = computeDuettoAnnualCost(effectiveInputs);
+  const costSourceCurrency = (effectiveInputs.subscriptionCost > 0 || effectiveInputs.duettoAnnualCost > 0)
+    ? duettoCurrencyForConversion
+    : "USD";
+  const effectiveCost = convertCurrency(rawEffectiveCost, costSourceCurrency, currency, exchangeRates);
 
   const proj = projections.moderate;
   const conservProj = projections.conservative;
@@ -65,7 +76,7 @@ export function Tab5Executive() {
   const totalFiveYearNet = yearlyProjections.reduce((s, y) => s + y.netBenefit, 0);
   const totalFiveYearImpact = yearlyProjections.reduce((s, y) => s + y.totalImpact, 0);
   const totalFiveYearInvestment = yearlyProjections.reduce((s, y) => s + y.duettoInvestment, 0);
-  const fiveYearROIMultiple = totalFiveYearImpact / totalFiveYearInvestment;
+  const fiveYearROIMultiple = totalFiveYearInvestment > 0 ? totalFiveYearImpact / totalFiveYearInvestment : 0;
   const incrementalNOI = (yearlyProjections[4]?.totalImpact || 0) * 0.85;
   const valuationImpact = incrementalNOI / capRate;
 
@@ -153,6 +164,21 @@ export function Tab5Executive() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIncludeFiveYear((v) => !v)}
+            className={clsx(
+              "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-sans transition-all",
+              includeFiveYear
+                ? "bg-gold-500/15 border-gold-500/40 text-gold-400"
+                : "bg-white/5 border-white/15 text-white/40"
+            )}
+            title="Toggle 5-year projection section in summary and PDF"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={includeFiveYear ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+            </svg>
+            5-Year Projection
+          </button>
           <div className="flex items-center gap-2">
             <span className="text-white/30 text-xs font-sans whitespace-nowrap">Display in</span>
             <select
@@ -435,6 +461,7 @@ export function Tab5Executive() {
             </div>
 
             {/* 5-Year Summary */}
+            {includeFiveYear && (
             <div>
               <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">5-Year Value Creation</p>
               <div className="grid grid-cols-5 gap-3 mb-4">
@@ -466,6 +493,7 @@ export function Tab5Executive() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Investment Recommendation */}
             <div className="rounded-2xl border border-gold-500/30 bg-gold-500/5 p-6">
@@ -495,8 +523,8 @@ export function Tab5Executive() {
                   <p className="text-white/70 text-sm font-sans leading-relaxed">
                     <span className="text-emerald-brand font-semibold">RevPAR improvement of {proj.currentRevPAR > 0 ? (((proj.newRevPAR - proj.currentRevPAR) / proj.currentRevPAR) * 100).toFixed(1) : "0"}%</span>{" "}
                     on {Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory{isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""} delivers{" "}
-                    <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> ROI annually —
-                    and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years.
+                    <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> ROI annually
+                    {includeFiveYear && <> — and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years</>}.
                   </p>
                   <p className="text-white/40 text-xs font-sans mt-3">
                     The conservative scenario alone delivers {formatCurrency(conservProj.totalAnnualImpact, currency, true)}, with
