@@ -5,6 +5,7 @@ import type {
   ROIProjection,
   YearlyProjection,
   Scenario,
+  CoStarHistoricalRow,
 } from "./types";
 
 /**
@@ -139,6 +140,25 @@ export const DEFAULT_ASSUMPTIONS = {
     marketGrowthRate: 0.03,
   },
 };
+
+/**
+ * Computes YoY change for a segment's historical data (two most-recent actual years).
+ * Returns null when there's insufficient data.
+ */
+export function computeSegmentYoY(
+  historicalRows?: CoStarHistoricalRow[]
+): { occDelta: number; adrPct: number; revparPct: number } | null {
+  if (!historicalRows?.length) return null;
+  const actual = historicalRows
+    .filter((r) => !r.isForecast)
+    .sort((a, b) => b.year - a.year);
+  if (actual.length < 2 || !actual[1].revpar) return null;
+  return {
+    occDelta: actual[0].occupancy - actual[1].occupancy,
+    adrPct: actual[1].adr > 0 ? ((actual[0].adr - actual[1].adr) / actual[1].adr) * 100 : 0,
+    revparPct: actual[1].revpar > 0 ? ((actual[0].revpar - actual[1].revpar) / actual[1].revpar) * 100 : 0,
+  };
+}
 
 /**
  * Default RMS effectiveness by month for Year 1.

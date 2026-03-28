@@ -13,6 +13,7 @@ import {
   normalizeInputCurrencies,
   convertCurrency,
   CURRENCY_SYMBOLS,
+  computeSegmentYoY,
 } from "@/lib/calculations";
 import { clsx } from "clsx";
 import type { Currency } from "@/lib/types";
@@ -33,7 +34,7 @@ export function Tab5Executive() {
   const {
     inputs, projections, scenario, yearlyProjections, capRate,
     preparedBy, nextSteps, setPreparedBy, setNextSteps, portfolioProperties,
-    outputCurrency, setOutputCurrency, exchangeRates,
+    outputCurrency, setOutputCurrency, exchangeRates, costarBenchmarks,
   } = useCalculatorStore();
 
   const [isExporting, setIsExporting] = useState(false);
@@ -62,6 +63,19 @@ export function Tab5Executive() {
 
   const SCENARIO_LABELS: Record<string, string> = { conservative: "Conservative", moderate: "Moderate", aggressive: "Aggressive" };
   const proj = projections[scenario];
+
+  // Market segment benchmark context
+  const primaryBenchmark = costarBenchmarks[0] ?? null;
+  const segmentKey = inputs.propertyType as keyof NonNullable<typeof primaryBenchmark>["byClass"];
+  const segmentYoY = primaryBenchmark
+    ? computeSegmentYoY(primaryBenchmark.byClassHistorical?.[segmentKey])
+    : null;
+  // Projected hotel RevPAR improvement % (hotel-wide blended, driven by selected scenario)
+  const projectedRevPARPct = proj.currentRevPAR > 0
+    ? ((proj.newRevPAR - proj.currentRevPAR) / proj.currentRevPAR) * 100
+    : 0;
+  // How many percentage points above the market segment trend
+  const outperformancePP = segmentYoY !== null ? projectedRevPARPct - segmentYoY.revparPct : null;
 
   // Build exchange rate disclosure for any currency that differs from outputCurrency
   const sourceCurrencies = new Set<string>();
@@ -423,6 +437,53 @@ export function Tab5Executive() {
                 )}
               </div>
             </div>
+
+            {/* Market Segment Benchmark Comparison — only when CoStar data is available */}
+            {primaryBenchmark && segmentYoY !== null && (
+              <div className="rounded-2xl border border-white/10 bg-white/3 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold">
+                    Market Positioning vs. {PROPERTY_TYPE_LABELS[inputs.propertyType]} Segment
+                  </p>
+                  <span className="text-[10px] font-sans text-white/30 bg-white/5 border border-white/10 rounded-full px-2.5 py-1">
+                    CoStar · {primaryBenchmark.marketName}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Market segment YoY */}
+                  <div className="rounded-xl p-4 bg-navy-800/60 border border-white/10 text-center">
+                    <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-2">Market Segment YoY</p>
+                    <p className={`text-2xl font-serif font-bold ${segmentYoY.revparPct >= 0 ? "text-white" : "text-[#FF5900]"}`}>
+                      {segmentYoY.revparPct >= 0 ? "+" : ""}{segmentYoY.revparPct.toFixed(1)}%
+                    </p>
+                    <p className="text-white/30 text-[10px] font-sans mt-1">RevPAR growth · prior year</p>
+                  </div>
+                  {/* Projected with Duetto */}
+                  <div className="rounded-xl p-4 bg-emerald-brand/10 border border-emerald-brand/30 text-center">
+                    <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-2">With Duetto ({SCENARIO_LABELS[scenario]})</p>
+                    <p className="text-2xl font-serif font-bold text-emerald-brand">
+                      +{projectedRevPARPct.toFixed(1)}%
+                    </p>
+                    <p className="text-white/30 text-[10px] font-sans mt-1">Projected RevPAR improvement</p>
+                  </div>
+                  {/* Outperformance delta */}
+                  <div className="rounded-xl p-4 bg-gold-500/10 border border-gold-500/30 text-center">
+                    <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-2">Above Market Average</p>
+                    <p className="text-2xl font-serif font-bold text-gold-400">
+                      {outperformancePP !== null && outperformancePP >= 0 ? "+" : ""}{outperformancePP?.toFixed(1)}pp
+                    </p>
+                    <p className="text-white/30 text-[10px] font-sans mt-1">Percentage points above segment</p>
+                  </div>
+                </div>
+                {outperformancePP !== null && (
+                  <p className="text-white/30 text-[10px] font-sans mt-3 text-center">
+                    {outperformancePP >= 0
+                      ? `Duetto positions this property to grow RevPAR ${outperformancePP.toFixed(1)}pp above the ${PROPERTY_TYPE_LABELS[inputs.propertyType]} segment average.`
+                      : `Market segment is growing faster than current projection; consider a more aggressive scenario.`}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Revenue breakdown donut */}
             <div className="grid grid-cols-5 gap-6 items-center">

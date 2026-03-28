@@ -5,7 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { useCalculatorStore } from "@/store/calculatorStore";
-import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs, CURRENCY_SYMBOLS, convertCurrency } from "@/lib/calculations";
+import { formatCurrency, PROPERTY_TYPE_LABELS, aggregatePortfolioInputs, CURRENCY_SYMBOLS, convertCurrency, computeSegmentYoY } from "@/lib/calculations";
 import type { CoStarBenchmark, CoStarClassMetrics, CoStarHistoricalRow, Currency, DuettoMarketHotel } from "@/lib/types";
 
 const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
@@ -74,19 +74,6 @@ function DuettoFeatureCard({ title, description, badge, icon }: DuettoFeatureCar
 }
 
 // ─── CoStar class breakdown card ──────────────────────────────────────────────
-
-function computeSegmentYoY(
-  historicalRows?: CoStarHistoricalRow[]
-): { occDelta: number; adrPct: number; revparPct: number } | null {
-  if (!historicalRows?.length) return null;
-  const actual = historicalRows.filter((r) => !r.isForecast).sort((a, b) => b.year - a.year);
-  if (actual.length < 2 || !actual[1].adr) return null;
-  return {
-    occDelta: actual[0].occupancy - actual[1].occupancy,
-    adrPct: actual[1].adr > 0 ? ((actual[0].adr - actual[1].adr) / actual[1].adr) * 100 : 0,
-    revparPct: actual[1].revpar > 0 ? ((actual[0].revpar - actual[1].revpar) / actual[1].revpar) * 100 : 0,
-  };
-}
 
 function CoStarClassCard({
   label, metrics, currency, highlighted, yoy,
