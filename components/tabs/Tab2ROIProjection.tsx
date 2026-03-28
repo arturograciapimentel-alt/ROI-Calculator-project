@@ -6,7 +6,7 @@ import {
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { InputField, SliderInput, SelectInput } from "@/components/ui/InputField";
 import { MetricCard } from "@/components/ui/MetricCard";
-import { formatCurrency, formatPercent, computeDuettoAnnualCost, aggregatePortfolioInputs } from "@/lib/calculations";
+import { formatCurrency, formatPercent, computeDuettoAnnualCost, aggregatePortfolioInputs, DEFAULT_RMS_EFFECTIVENESS } from "@/lib/calculations";
 import type { Currency, Scenario, ScenarioAssumptions } from "@/lib/types";
 
 const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
@@ -78,7 +78,7 @@ function ExplanationCard({ title, body, color = "gold" }: ExplanationCardProps) 
 }
 
 export function Tab2ROIProjection() {
-  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties, marketSignalApplied, outputCurrency, setOutputCurrency } = useCalculatorStore();
+  const { inputs, scenario, assumptions, projections, setScenario, updateAssumption, portfolioProperties, marketSignalApplied, outputCurrency, setOutputCurrency, rmsEffectivenessMonthly, setRmsEffectiveness } = useCalculatorStore();
   const proj = projections[scenario];
   const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
@@ -470,6 +470,77 @@ export function Tab2ROIProjection() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* RMS Effectiveness Schedule */}
+      <div className="glass-card rounded-2xl p-6 border border-white/8">
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <div>
+            <h3 className="text-white font-serif font-semibold">RMS Effectiveness Schedule — Year 1</h3>
+            <p className="text-white/40 text-xs font-sans mt-1 max-w-2xl">
+              Models the learning curve as your team adopts Duetto. Months 1–2 default to 0% (implementation &amp; go-live, ~6–8 weeks). Revenue each month = <span className="text-gold-400 font-mono">effectiveness% × (Projected RevPAR − Current RevPAR) × rooms × 30</span>. Year 1 total drives the 5-year projection Year 1 value.
+            </p>
+          </div>
+          <button
+            onClick={() => setRmsEffectiveness([...DEFAULT_RMS_EFFECTIVENESS])}
+            className="text-[10px] font-sans text-white/30 hover:text-white/60 border border-white/10 rounded px-2 py-1 transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            Reset defaults
+          </button>
+        </div>
+        <div className="grid grid-cols-6 gap-2 mt-4">
+          {rmsEffectivenessMonthly.map((val, i) => {
+            const isImpl = i < 2;
+            return (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <p className="text-white/30 text-[10px] font-sans">M{i + 1}</p>
+                {isImpl && (
+                  <p className="text-[9px] font-sans text-[#7459EE]/60 -mt-0.5 mb-0.5">impl.</p>
+                )}
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(val * 100)}
+                  onChange={(e) => {
+                    const next = [...rmsEffectivenessMonthly];
+                    next[i] = Math.min(1, Math.max(0, Number(e.target.value) / 100));
+                    setRmsEffectiveness(next);
+                  }}
+                  className={clsx(
+                    "w-full text-center text-sm font-sans font-semibold rounded-lg border py-2 bg-navy-800/60 outline-none focus:border-gold-500/50 transition-colors",
+                    isImpl
+                      ? "border-[#7459EE]/30 text-[#7459EE]/70"
+                      : val === 0
+                      ? "border-white/10 text-white/30"
+                      : val >= 1
+                      ? "border-emerald-brand/40 text-emerald-brand"
+                      : "border-white/15 text-white"
+                  )}
+                />
+                <p className="text-white/20 text-[10px] font-sans">%</p>
+                {/* Mini bar */}
+                <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className={clsx("h-full rounded-full transition-all", isImpl ? "bg-[#7459EE]/50" : "bg-gold-500/60")}
+                    style={{ width: `${val * 100}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-white/30 text-[10px] font-sans">
+            Year 1 avg. effectiveness: <span className="text-gold-400 font-semibold">
+              {Math.round(rmsEffectivenessMonthly.reduce((s, e) => s + e, 0) / rmsEffectivenessMonthly.length * 100)}%
+            </span>
+          </p>
+          <p className="text-white/20 text-[10px] font-sans">
+            Edit each month (0–100%). Months 1–2 represent the implementation period.
+          </p>
         </div>
       </div>
 

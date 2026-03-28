@@ -211,4 +211,6 @@ export interface CalculatorState {
   outputCurrency: Currency;
   /** Exchange rates relative to USD: 1 USD = N units of currency */
   exchangeRates: Record<Currency, number>;
+  /** Per-month RMS effectiveness (0–1) for months 1-12 of Year 1 */
+  rmsEffectivenessMonthly: number[];
 }

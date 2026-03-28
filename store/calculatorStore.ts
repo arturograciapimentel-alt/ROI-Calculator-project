@@ -15,6 +15,7 @@ import {
   calculateROI,
   calculateYearlyProjections,
   DEFAULT_ASSUMPTIONS,
+  DEFAULT_RMS_EFFECTIVENESS,
   SAMPLE_PROPERTY,
   computeDuettoAnnualCost,
   aggregatePortfolioInputs,
@@ -50,6 +51,7 @@ type CalculatorStore = CalculatorState & {
   applyMarketSignal: (conservative: number, moderate: number, aggressive: number) => void;
   setOutputCurrency: (currency: Currency) => void;
   updateExchangeRate: (currency: Currency, rate: number) => void;
+  setRmsEffectiveness: (values: number[]) => void;
 };
 
 const DEFAULT_INPUTS: PropertyInputs = {
@@ -103,7 +105,8 @@ function recalculate(
   capRate: number,
   portfolioProperties: PortfolioProperty[] = [],
   outputCurrency: Currency = "USD",
-  exchangeRates: Record<string, number> = DEFAULT_EXCHANGE_RATES
+  exchangeRates: Record<string, number> = DEFAULT_EXCHANGE_RATES,
+  rmsEffectiveness: number[] = DEFAULT_RMS_EFFECTIVENESS
 ) {
   // When portfolio mode is active, aggregate per-property data into blended inputs
   const isPortfolio = portfolioProperties.length >= 2;
@@ -119,15 +122,16 @@ function recalculate(
   const effectiveInputs = normalizeInputCurrencies(withCost, outputCurrency, exchangeRates, isPortfolio);
 
   const projections = {
-    conservative: calculateROI(effectiveInputs, assumptions.conservative, hourlyLaborRate),
-    moderate: calculateROI(effectiveInputs, assumptions.moderate, hourlyLaborRate),
-    aggressive: calculateROI(effectiveInputs, assumptions.aggressive, hourlyLaborRate),
+    conservative: calculateROI(effectiveInputs, assumptions.conservative, hourlyLaborRate, rmsEffectiveness),
+    moderate: calculateROI(effectiveInputs, assumptions.moderate, hourlyLaborRate, rmsEffectiveness),
+    aggressive: calculateROI(effectiveInputs, assumptions.aggressive, hourlyLaborRate, rmsEffectiveness),
   };
 
   const yearlyProjections = calculateYearlyProjections(
     effectiveInputs,
     assumptions.moderate,
-    hourlyLaborRate
+    hourlyLaborRate,
+    rmsEffectiveness
   );
 
   return { projections, yearlyProjections, duettoAnnualCost };
@@ -143,20 +147,22 @@ export const useCalculatorStore = create<CalculatorStore>()(
       marketSignalApplied: false,
       outputCurrency: "USD",
       exchangeRates: { ...DEFAULT_EXCHANGE_RATES } as Record<Currency, number>,
+      rmsEffectivenessMonthly: [...DEFAULT_RMS_EFFECTIVENESS],
       assumptions: {
         conservative: { ...DEFAULT_ASSUMPTIONS.conservative },
         moderate: { ...DEFAULT_ASSUMPTIONS.moderate },
         aggressive: { ...DEFAULT_ASSUMPTIONS.aggressive },
       },
       projections: {
-        conservative: calculateROI(DEFAULT_INPUTS, DEFAULT_ASSUMPTIONS.conservative, 50),
-        moderate: calculateROI(DEFAULT_INPUTS, DEFAULT_ASSUMPTIONS.moderate, 50),
-        aggressive: calculateROI(DEFAULT_INPUTS, DEFAULT_ASSUMPTIONS.aggressive, 50),
+        conservative: calculateROI(DEFAULT_INPUTS, DEFAULT_ASSUMPTIONS.conservative, 50, DEFAULT_RMS_EFFECTIVENESS),
+        moderate: calculateROI(DEFAULT_INPUTS, DEFAULT_ASSUMPTIONS.moderate, 50, DEFAULT_RMS_EFFECTIVENESS),
+        aggressive: calculateROI(DEFAULT_INPUTS, DEFAULT_ASSUMPTIONS.aggressive, 50, DEFAULT_RMS_EFFECTIVENESS),
       },
       yearlyProjections: calculateYearlyProjections(
         DEFAULT_INPUTS,
         DEFAULT_ASSUMPTIONS.moderate,
-        50
+        50,
+        DEFAULT_RMS_EFFECTIVENESS
       ),
       capRate: 0.075,
       hourlyLaborRate: 50,
@@ -202,7 +208,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         // Keep inputs.duettoAnnualCost in sync with the derived value (single-property mode only)
         const syncedInputs = portfolioProperties.length < 2
@@ -231,7 +238,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           state.portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ assumptions, projections, yearlyProjections, marketSignalApplied: false });
       },
@@ -250,7 +258,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           state.portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ assumptions, projections, yearlyProjections, marketSignalApplied: true });
       },
@@ -265,7 +274,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           [],
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ inputs: { ...inputs, duettoAnnualCost }, portfolioProperties: [], projections, yearlyProjections });
       },
@@ -279,7 +289,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           [],
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ inputs: { ...DEFAULT_INPUTS, duettoAnnualCost }, portfolioProperties: [], projections, yearlyProjections });
       },
@@ -294,7 +305,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           capRate,
           state.portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ projections, yearlyProjections });
       },
@@ -308,7 +320,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           state.portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ hourlyLaborRate, projections, yearlyProjections });
       },
@@ -325,7 +338,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ inputs, portfolioProperties, projections, yearlyProjections });
       },
@@ -342,7 +356,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           portfolioProperties,
           state.outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ portfolioProperties, projections, yearlyProjections });
       },
@@ -429,6 +444,21 @@ export const useCalculatorStore = create<CalculatorStore>()(
         set({ duettoMarketData });
       },
 
+      setRmsEffectiveness: (rmsEffectivenessMonthly) => {
+        const state = get();
+        const { projections, yearlyProjections } = recalculate(
+          state.inputs,
+          state.assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          state.portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates,
+          rmsEffectivenessMonthly
+        );
+        set({ rmsEffectivenessMonthly, projections, yearlyProjections });
+      },
+
       setOutputCurrency: (outputCurrency) => {
         const state = get();
         const { projections, yearlyProjections } = recalculate(
@@ -438,7 +468,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           state.portfolioProperties,
           outputCurrency,
-          state.exchangeRates
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ outputCurrency, projections, yearlyProjections });
       },
@@ -453,7 +484,8 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.capRate,
           state.portfolioProperties,
           state.outputCurrency,
-          exchangeRates
+          exchangeRates,
+          state.rmsEffectivenessMonthly
         );
         set({ exchangeRates, projections, yearlyProjections });
       },
@@ -473,12 +505,16 @@ export const useCalculatorStore = create<CalculatorStore>()(
         outputCurrency: state.outputCurrency,
         exchangeRates: state.exchangeRates,
         costarBenchmarks: state.costarBenchmarks,
+        rmsEffectivenessMonthly: state.rmsEffectivenessMonthly,
       }),
       // Recalculate projections from restored inputs/settings on page load,
       // so they reflect the correct outputCurrency instead of the default USD values.
       merge: (persisted, current) => {
         const p = persisted as Partial<CalculatorState>;
         const merged = { ...current, ...p } as typeof current;
+        const rmsEff = merged.rmsEffectivenessMonthly?.length === 12
+          ? merged.rmsEffectivenessMonthly
+          : DEFAULT_RMS_EFFECTIVENESS;
         const { projections, yearlyProjections } = recalculate(
           merged.inputs,
           merged.assumptions,
@@ -486,9 +522,10 @@ export const useCalculatorStore = create<CalculatorStore>()(
           merged.capRate,
           merged.portfolioProperties,
           merged.outputCurrency,
-          merged.exchangeRates
+          merged.exchangeRates,
+          rmsEff
         );
-        return { ...merged, projections, yearlyProjections };
+        return { ...merged, rmsEffectivenessMonthly: rmsEff, projections, yearlyProjections };
       },
     }
   )

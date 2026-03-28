@@ -121,25 +121,35 @@ export function Tab5Executive() {
         allowTaint: true,
         backgroundColor: "#0E2124",
         logging: false,
+        // Expand the clip to the full scrollable height so nothing is cut off
+        windowWidth: printRef.current.scrollWidth,
+        windowHeight: printRef.current.scrollHeight,
       });
 
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
+      const A4_WIDTH_MM  = 210;
+      const A4_HEIGHT_MM = 297;
+      const imgWidth  = A4_WIDTH_MM;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
 
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
+      let pdf: InstanceType<typeof jsPDF>;
+      if (imgHeight <= A4_HEIGHT_MM) {
+        // Content shorter than one A4 page — use a custom page height to eliminate bottom whitespace
+        pdf = new jsPDF({ unit: "mm", format: [A4_WIDTH_MM, imgHeight] });
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      } else {
+        // Multi-page — standard A4, tile the image across pages
+        pdf = new jsPDF({ unit: "mm", format: "a4" });
+        let heightLeft = imgHeight;
+        let position   = 0;
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        heightLeft -= A4_HEIGHT_MM;
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+          heightLeft -= A4_HEIGHT_MM;
+        }
       }
 
       pdf.save(
@@ -532,17 +542,32 @@ export function Tab5Executive() {
               </div>
             </div>
 
+            {/* Implementation Period Note */}
+            <div className="rounded-xl border border-[#7459EE]/20 bg-[#7459EE]/5 p-4">
+              <p className="text-[#7459EE] text-[10px] font-sans font-semibold uppercase tracking-wider mb-1">Implementation &amp; Go-Live Timeline</p>
+              <p className="text-white/50 text-xs font-sans leading-relaxed">
+                Following contract execution, Duetto's implementation team begins a <span className="text-white/70 font-semibold">6–8 week onboarding process</span> covering PMS integration, data configuration, and team training. No incremental RevPAR impact is expected during this period. The Year 1 projections above reflect the RMS effectiveness ramp — starting from Month 3 through Month 12 — as your team progressively applies open pricing and demand intelligence across your yieldable inventory. Full effectiveness is reached in Month 12.
+              </p>
+            </div>
+
             {/* Next Steps */}
             <div>
               <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">Recommended Next Steps</p>
-              <div className="rounded-xl border border-white/10 bg-navy-800/40 p-4">
-                <textarea
-                  value={nextSteps}
-                  onChange={(e) => setNextSteps(e.target.value)}
-                  rows={4}
-                  className="w-full bg-transparent text-white/70 text-sm font-sans outline-none resize-none leading-relaxed placeholder-white/20 no-print-border"
-                  placeholder="Enter personalized next steps for this prospect..."
-                />
+              <div className="rounded-xl border border-white/10 bg-navy-800/40 p-4 min-h-[80px]">
+                {isExporting ? (
+                  /* Static div for html2canvas — textarea doesn't render reliably */
+                  <p className="text-white/70 text-sm font-sans leading-relaxed whitespace-pre-wrap">
+                    {nextSteps || "Enter personalized next steps for this prospect..."}
+                  </p>
+                ) : (
+                  <textarea
+                    value={nextSteps}
+                    onChange={(e) => setNextSteps(e.target.value)}
+                    rows={4}
+                    className="w-full bg-transparent text-white/70 text-sm font-sans outline-none resize-none leading-relaxed placeholder-white/20"
+                    placeholder="Enter personalized next steps for this prospect..."
+                  />
+                )}
               </div>
             </div>
 

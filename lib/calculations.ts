@@ -140,7 +140,16 @@ export const DEFAULT_ASSUMPTIONS = {
   },
 };
 
-/** ADR share of the RevPAR uplift (open pricing is primarily rate-driven) */
+/**
+ * Default RMS effectiveness by month for Year 1.
+ * Months 1-2 are 0% (implementation / go-live period, ~6-8 weeks).
+ * Months 3-12 ramp from 40% to 100% as the team learns the system.
+ */
+export const DEFAULT_RMS_EFFECTIVENESS: number[] = [
+  0, 0, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00,
+];
+
+
 const ADR_SHARE = 0.6;
 
 export function calculateLaborSaved(inputs: PropertyInputs): number {
@@ -151,7 +160,8 @@ export function calculateLaborSaved(inputs: PropertyInputs): number {
 export function calculateROI(
   inputs: PropertyInputs,
   assumptions: ScenarioAssumptions,
-  hourlyLaborRate: number
+  hourlyLaborRate: number,
+  rmsEffectiveness: number[] = DEFAULT_RMS_EFFECTIVENESS
 ): ROIProjection {
   const { totalRooms } = inputs;
   const currentADR = isFinite(inputs.currentADR) && inputs.currentADR >= 0 ? inputs.currentADR : 0;
@@ -203,16 +213,36 @@ export function calculateROI(
   const totalAnnualImpact = totalIncrementalRevenue + totalCostSavings;
 
   // ROI metrics
-  const netROIPercent   = inputs.duettoAnnualCost > 0
+  const netROIPercent = inputs.duettoAnnualCost > 0
     ? ((totalAnnualImpact - inputs.duettoAnnualCost) / inputs.duettoAnnualCost) * 100 : 0;
-  // Payback uses Year 1 reality: full investment (recurring + implementation fee) vs Year 1 ramp-adjusted impact.
-  // Year 1 ramp = 75% of steady-state (Q1 partial, Q2-Q3 ramping, Q4 full).
-  const year1Investment = inputs.duettoAnnualCost + (inputs.implementationFee || 0);
-  const year1MonthlyImpact = (totalAnnualImpact * 0.75) / 12;
-  const paybackMonths   = year1Investment > 0 && year1MonthlyImpact > 0
-    ? year1Investment / year1MonthlyImpact : 0;
-  const roiMultiple     = inputs.duettoAnnualCost > 0
+  const roiMultiple   = inputs.duettoAnnualCost > 0
     ? totalAnnualImpact / inputs.duettoAnnualCost : 0;
+
+  // Payback: simulate month-by-month cumulative cash flows using the RMS effectiveness schedule.
+  // Implementation fee is incurred at signing (month 0); subscription accrues monthly.
+  // Months where effectiveness = 0 generate no revenue (implementation period).
+  const monthlyBaseImpact  = combinedRevPARUplift / 12;
+  const monthlySubscription = inputs.duettoAnnualCost > 0 ? inputs.duettoAnnualCost / 12 : 0;
+  const implementationFee  = inputs.implementationFee || 0;
+  let cumulativeRevenue = 0;
+  let cumulativeCost    = implementationFee; // upfront at contract signing
+  let paybackMonths     = 0;
+  for (let m = 0; m < rmsEffectiveness.length; m++) {
+    cumulativeCost    += monthlySubscription;
+    cumulativeRevenue += (rmsEffectiveness[m] ?? 1) * monthlyBaseImpact;
+    if (paybackMonths === 0 && cumulativeRevenue >= cumulativeCost) {
+      paybackMonths = m + 1;
+      break;
+    }
+  }
+  if (paybackMonths === 0 && monthlySubscription > 0 && monthlyBaseImpact > 0) {
+    // Not reached within the tracked months — project beyond Year 1 at 100% effectiveness
+    const deficit = cumulativeCost - cumulativeRevenue;
+    const netMonthly = monthlyBaseImpact - monthlySubscription;
+    paybackMonths = netMonthly > 0
+      ? rmsEffectiveness.length + Math.ceil(deficit / netMonthly)
+      : 0;
+  }
 
   return {
     incrementalADRRevenue,
@@ -239,15 +269,16 @@ export function calculateROI(
 export function calculateYearlyProjections(
   inputs: PropertyInputs,
   assumptions: ScenarioAssumptions,
-  hourlyLaborRate: number
+  hourlyLaborRate: number,
+  rmsEffectiveness: number[] = DEFAULT_RMS_EFFECTIVENESS
 ): YearlyProjection[] {
-  const baseProjection = calculateROI(inputs, assumptions, hourlyLaborRate);
+  const baseProjection = calculateROI(inputs, assumptions, hourlyLaborRate, rmsEffectiveness);
   const yearlyCosts = computeDuettoYearlyCosts(inputs);
   const years: YearlyProjection[] = [];
   let cumulativeNetBenefit = 0;
 
-  // Ramp factors for Year 1 (partial implementation)
-  const year1Ramp = 0.75; // Q1: 50%, Q2-Q3: 80%, Q4: 100% → avg ~75%
+  // Year 1 ramp = average monthly effectiveness across the 12-month schedule
+  const year1Ramp = rmsEffectiveness.reduce((s, e) => s + e, 0) / Math.max(rmsEffectiveness.length, 1);
 
   for (let year = 1; year <= 5; year++) {
     const marketMultiplier = Math.pow(1 + assumptions.marketGrowthRate, year - 1);
