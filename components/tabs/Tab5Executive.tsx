@@ -6,7 +6,6 @@ import { DuettoIcon, DuettoWordmark } from "@/components/ui/DuettoLogo";
 import {
   formatCurrency,
   formatPercent,
-  estimateDuettoCost,
   computeDuettoAnnualCost,
   aggregatePortfolioInputs,
   PROPERTY_TYPE_LABELS,
@@ -61,8 +60,8 @@ export function Tab5Executive() {
     : "USD";
   const effectiveCost = convertCurrency(rawEffectiveCost, costSourceCurrency, currency, exchangeRates);
 
-  const proj = projections.moderate;
-  const conservProj = projections.conservative;
+  const SCENARIO_LABELS: Record<string, string> = { conservative: "Conservative", moderate: "Moderate", aggressive: "Aggressive" };
+  const proj = projections[scenario];
 
   // Build exchange rate disclosure for any currency that differs from outputCurrency
   const sourceCurrencies = new Set<string>();
@@ -374,7 +373,7 @@ export function Tab5Executive() {
             {/* Hero KPIs */}
             <div>
               <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">
-                Financial Impact Summary — Moderate Scenario
+                Financial Impact Summary — {SCENARIO_LABELS[scenario]} Scenario
               </p>
               <div className={clsx("grid gap-4", includePayback ? "grid-cols-4" : "grid-cols-3")}>
                 {/* RevPAR Improvement */}
@@ -507,12 +506,8 @@ export function Tab5Executive() {
                     <span className="text-white font-semibold font-sans">{formatCurrency(effectiveCost, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-white/10">
-                    <span className="text-white/50 text-sm font-sans">Annual Financial Impact (Mod.)</span>
+                    <span className="text-white/50 text-sm font-sans">Annual Financial Impact ({SCENARIO_LABELS[scenario]})</span>
                     <span className="text-gold-400 font-semibold font-sans">{formatCurrency(proj.totalAnnualImpact, currency, true)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-white/10">
-                    <span className="text-white/50 text-sm font-sans">Annual Financial Impact (Con.)</span>
-                    <span className="text-emerald-brand font-semibold font-sans">{formatCurrency(conservProj.totalAnnualImpact, currency, true)}</span>
                   </div>
                   {proj.hoursSavedPerWeek > 0 && (
                     <div className="flex items-center justify-between py-2">
@@ -529,9 +524,9 @@ export function Tab5Executive() {
                     {includeFiveYear && <> — and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years</>}.
                   </p>
                   <p className="text-white/40 text-xs font-sans mt-3">
-                    The conservative scenario alone delivers {formatCurrency(conservProj.totalAnnualImpact, currency, true)}, with
-                    moderate projections suggesting {formatCurrency(proj.totalAnnualImpact, currency, true)}.
-                    Risk-adjusted payback in as little as {conservProj.paybackMonths.toFixed(1)} months.
+                    {SCENARIO_LABELS[scenario]} scenario projects {formatCurrency(proj.totalAnnualImpact, currency, true)} annual financial impact
+                    on {effectiveInputs.totalRooms.toLocaleString()} rooms at {formatPercent(effectiveInputs.currentOccupancy)} occupancy.
+                    {includePayback && ` Payback in ${proj.paybackMonths.toFixed(1)} months (Year 1, including implementation).`}
                   </p>
                 </div>
               </div>
