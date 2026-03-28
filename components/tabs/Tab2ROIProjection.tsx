@@ -255,9 +255,14 @@ export function Tab2ROIProjection() {
         <h3 className="text-white font-serif font-semibold mb-1">
           {SCENARIO_LABELS[scenario]} Scenario Assumptions
         </h3>
-        <p className="text-white/40 text-xs font-sans mb-6">
+        <p className="text-white/40 text-xs font-sans mb-2">
           Set the expected RevPAR uplift for this scenario. The model decomposes it: 60% attributed to ADR improvement (open pricing), 40% to occupancy (demand intelligence).
         </p>
+        <div className="mb-4 p-2.5 rounded-lg bg-[#7459EE]/8 border border-[#7459EE]/20">
+          <p className="text-[#7459EE]/80 text-[10px] font-sans leading-relaxed">
+            <span className="font-semibold">Note on displayed RevPAR improvement:</span> The uplift you set here applies to <span className="font-semibold">yieldable inventory only</span> ({Math.round(effectiveInputs.yieldablePercent * 100)}% of room nights). The hotel-wide blended RevPAR improvement shown in charts and the Executive Summary will be lower: it equals <span className="font-semibold">scenario uplift × yieldable%</span>. Non-yieldable nights (group blocks, contracted rates) remain unchanged.
+          </p>
+        </div>
         <div className="flex items-center gap-2 mb-1">
           <p className="text-white/60 text-xs font-sans uppercase tracking-wider">RevPAR Uplift</p>
           {marketSignalApplied && (
@@ -442,7 +447,7 @@ export function Tab2ROIProjection() {
                   bold: true,
                 },
                 {
-                  label: "Payback Period",
+                  label: "Payback Period (Yr 1)",
                   fmt: (p: typeof projections.conservative) => `${p.paybackMonths.toFixed(1)} months`,
                   bold: true,
                 },

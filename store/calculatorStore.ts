@@ -215,11 +215,13 @@ export const useCalculatorStore = create<CalculatorStore>()(
 
       updateAssumption: (scenario, key, value) => {
         const state = get();
+        // Ensure revparUpliftPercent is never set below 1% (0.01)
+        const safeValue = key === "revparUpliftPercent" ? Math.max(0.01, value) : value;
         const assumptions = {
           ...state.assumptions,
           [scenario]: {
             ...state.assumptions[scenario],
-            [key]: value,
+            [key]: safeValue,
           },
         };
         const { projections, yearlyProjections } = recalculate(

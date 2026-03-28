@@ -205,8 +205,12 @@ export function calculateROI(
   // ROI metrics
   const netROIPercent   = inputs.duettoAnnualCost > 0
     ? ((totalAnnualImpact - inputs.duettoAnnualCost) / inputs.duettoAnnualCost) * 100 : 0;
-  const paybackMonths   = inputs.duettoAnnualCost > 0 && totalAnnualImpact > 0
-    ? inputs.duettoAnnualCost / (totalAnnualImpact / 12) : 0;
+  // Payback uses Year 1 reality: full investment (recurring + implementation fee) vs Year 1 ramp-adjusted impact.
+  // Year 1 ramp = 75% of steady-state (Q1 partial, Q2-Q3 ramping, Q4 full).
+  const year1Investment = inputs.duettoAnnualCost + (inputs.implementationFee || 0);
+  const year1MonthlyImpact = (totalAnnualImpact * 0.75) / 12;
+  const paybackMonths   = year1Investment > 0 && year1MonthlyImpact > 0
+    ? year1Investment / year1MonthlyImpact : 0;
   const roiMultiple     = inputs.duettoAnnualCost > 0
     ? totalAnnualImpact / inputs.duettoAnnualCost : 0;
 
