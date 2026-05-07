@@ -130,7 +130,7 @@ export function Tab5Executive() {
       ]);
 
       const canvas = await html2canvas(printRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#0E2124",
@@ -140,7 +140,7 @@ export function Tab5Executive() {
         windowHeight: printRef.current.scrollHeight,
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL("image/jpeg", 0.88);
       const A4_WIDTH_MM  = 210;
       const A4_HEIGHT_MM = 297;
       const imgWidth  = A4_WIDTH_MM;
@@ -150,18 +150,18 @@ export function Tab5Executive() {
       if (imgHeight <= A4_HEIGHT_MM) {
         // Content shorter than one A4 page — use a custom page height to eliminate bottom whitespace
         pdf = new jsPDF({ unit: "mm", format: [A4_WIDTH_MM, imgHeight] });
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+        pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight, undefined, "FAST");
       } else {
         // Multi-page — standard A4, tile the image across pages
         pdf = new jsPDF({ unit: "mm", format: "a4" });
         let heightLeft = imgHeight;
         let position   = 0;
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
         heightLeft -= A4_HEIGHT_MM;
         while (heightLeft > 0) {
           position = heightLeft - imgHeight;
           pdf.addPage();
-          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+          pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
           heightLeft -= A4_HEIGHT_MM;
         }
       }
