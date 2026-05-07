@@ -60,6 +60,7 @@ export function Tab5Executive() {
     ? duettoCurrencyForConversion
     : "USD";
   const effectiveCost = convertCurrency(rawEffectiveCost, costSourceCurrency, currency, exchangeRates);
+  const effectiveImplFee = convertCurrency(effectiveInputs.implementationFee || 0, costSourceCurrency, currency, exchangeRates);
 
   const SCENARIO_LABELS: Record<string, string> = { conservative: "Conservative", moderate: "Moderate", aggressive: "Aggressive" };
   const proj = projections[scenario];
@@ -300,6 +301,10 @@ export function Tab5Executive() {
             <div className="text-right">
               <p className="text-white/30 text-xs font-sans">Annual Duetto Investment</p>
               <p className="text-2xl font-serif font-bold text-white">{formatCurrency(effectiveCost, currency)}</p>
+              <p className="text-white/30 text-[10px] font-sans mt-0.5">Annual subscription</p>
+              {effectiveImplFee > 0 && (
+                <p className="text-white/30 text-[10px] font-sans">+ {formatCurrency(effectiveImplFee, currency)} one-time impl. fee (Yr 1)</p>
+              )}
               {showExchangeNote && (
                 <p className="text-white/25 text-[10px] font-sans mt-0.5">
                   {exchangeRateLines.join(" · ")}
@@ -573,7 +578,12 @@ export function Tab5Executive() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <div className="flex items-center justify-between py-2 border-b border-white/10">
-                    <span className="text-white/50 text-sm font-sans">Annual Duetto Investment</span>
+                    <span className="text-white/50 text-sm font-sans">
+                      Annual Duetto Investment
+                      {effectiveImplFee > 0 && (
+                        <span className="block text-white/30 text-xs">+ {formatCurrency(effectiveImplFee, currency)} one-time impl. fee (Yr 1)</span>
+                      )}
+                    </span>
                     <span className="text-white font-semibold font-sans">{formatCurrency(effectiveCost, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-white/10">
