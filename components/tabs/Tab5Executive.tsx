@@ -299,11 +299,11 @@ export function Tab5Executive() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-white/30 text-xs font-sans">Annual Duetto Investment</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatCurrency(effectiveCost, currency)}</p>
-              <p className="text-white/30 text-[10px] font-sans mt-0.5">Annual subscription</p>
+              <p className="text-white/30 text-xs font-sans">Total Duetto Investment (Yr 1)</p>
+              <p className="text-2xl font-serif font-bold text-white">{formatCurrency(effectiveCost + effectiveImplFee, currency)}</p>
+              <p className="text-white/30 text-[10px] font-sans mt-1">Annual subscription: {formatCurrency(effectiveCost, currency)}</p>
               {effectiveImplFee > 0 && (
-                <p className="text-white/30 text-[10px] font-sans">+ {formatCurrency(effectiveImplFee, currency)} one-time impl. fee (Yr 1)</p>
+                <p className="text-white/30 text-[10px] font-sans">Implementation fee: {formatCurrency(effectiveImplFee, currency)} <span className="text-gold-500/60">(one-time, Yr 1 only)</span></p>
               )}
               {showExchangeNote && (
                 <p className="text-white/25 text-[10px] font-sans mt-0.5">
@@ -577,14 +577,21 @@ export function Tab5Executive() {
               <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">Investment Recommendation</p>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <div className="flex items-center justify-between py-2 border-b border-white/10">
-                    <span className="text-white/50 text-sm font-sans">
-                      Annual Duetto Investment
-                      {effectiveImplFee > 0 && (
-                        <span className="block text-white/30 text-xs">+ {formatCurrency(effectiveImplFee, currency)} one-time impl. fee (Yr 1)</span>
-                      )}
-                    </span>
-                    <span className="text-white font-semibold font-sans">{formatCurrency(effectiveCost, currency)}</span>
+                  <div className="py-2 border-b border-white/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/50 text-sm font-sans">Total Duetto Investment (Yr 1)</span>
+                      <span className="text-white font-semibold font-sans">{formatCurrency(effectiveCost + effectiveImplFee, currency)}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-white/30 text-xs font-sans pl-2">↳ Annual subscription</span>
+                      <span className="text-white/50 text-xs font-sans">{formatCurrency(effectiveCost, currency)}</span>
+                    </div>
+                    {effectiveImplFee > 0 && (
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-white/30 text-xs font-sans pl-2">↳ Implementation fee <span className="text-gold-500/60">(one-time, Yr 1 only)</span></span>
+                        <span className="text-white/50 text-xs font-sans">{formatCurrency(effectiveImplFee, currency)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-white/10">
                     <span className="text-white/50 text-sm font-sans">Annual Financial Impact ({SCENARIO_LABELS[scenario]})</span>
