@@ -150,7 +150,7 @@ export function computeSegmentYoY(
 ): { occDelta: number; adrPct: number; revparPct: number } | null {
   if (!historicalRows?.length) return null;
   const actual = historicalRows
-    .filter((r) => !r.isForecast)
+    .filter((r) => !r.isForecast) // Include both full-year and YTD actual data
     .sort((a, b) => b.year - a.year);
   if (actual.length < 2 || !actual[1].revpar) return null;
   return {

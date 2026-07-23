@@ -87,19 +87,28 @@ function extractClassMetrics(
 function extractHistoricalFromSlice(slice: string): CoStarHistoricalRow[] {
   const rows: CoStarHistoricalRow[] = [];
   const seen = new Set<number>();
+
+  // Match both year (20XX) and YTD rows with the same data pattern
   const re =
-    /\b(20\d{2})\s+([\d.]+)%\s+[-\d.]+%\s+\$([\d.,]+)\s+[-\d.]+%\s+\$([\d.,]+)/g;
+    /\b(?:(20\d{2})|YTD)\s+([\d.]+)%\s+[-\d.]+%\s+\$([\d.,]+)\s+[-\d.]+%\s+\$([\d.,]+)/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(slice)) !== null) {
-    const year = parseInt(match[1]);
-    if (seen.has(year)) continue;
+    const yearStr = match[1]; // Will be "20XX" or null for YTD
+    const isYTD = !yearStr;
+    const year = isYTD ? new Date().getFullYear() : parseInt(yearStr!);
+
+    // Avoid duplicates (if both YTD and current year appear, prefer YTD)
+    if (seen.has(year) && !isYTD) continue;
+    seen.delete(year); // Clear previous entry if switching to YTD
     seen.add(year);
+
     rows.push({
       year,
       occupancy: parsePercent(match[2]),
       adr: parseNum(match[3]),
       revpar: parseNum(match[4]),
-      isForecast: year > new Date().getFullYear(),
+      isForecast: false, // YTD and recent actuals are never forecasts
+      isYTD,
     });
   }
   return rows.sort((a, b) => a.year - b.year);

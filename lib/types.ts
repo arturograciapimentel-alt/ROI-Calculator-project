@@ -129,6 +129,7 @@ export interface CoStarHistoricalRow {
   adr: number;
   revpar: number;
   isForecast: boolean;
+  isYTD?: boolean; // Year-to-date actual data (current incomplete year)
 }
 
 export interface CoStarSubmarket {
