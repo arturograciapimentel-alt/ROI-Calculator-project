@@ -325,7 +325,7 @@ function PortfolioPropertyCard({
         <InputField label="Occupancy Rate">
           <SliderInput
             value={Math.round(property.currentOccupancy * 100)}
-            min={30}
+            min={10}
             max={99}
             onChange={(v) => onUpdate({ currentOccupancy: v / 100 })}
             formatValue={(v) => `${v}%`}
@@ -644,7 +644,7 @@ export function Tab1PropertyProfile() {
               >
                 <SliderInput
                   value={Math.round(inputs.currentOccupancy * 100)}
-                  min={30}
+                  min={10}
                   max={99}
                   onChange={(v) => update("currentOccupancy", v / 100)}
                   formatValue={(v) => `${v}%`}
