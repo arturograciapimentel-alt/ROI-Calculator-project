@@ -43,6 +43,8 @@ export function Tab5Executive() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const currency = outputCurrency;
+  const projectionYears = inputs.projectionYears || 5;
+  const projectionLabel = `${projectionYears}-Year`;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
 
@@ -184,12 +186,12 @@ export function Tab5Executive() {
                 ? "bg-gold-500/15 border-gold-500/40 text-gold-400"
                 : "bg-white/5 border-white/15 text-white/40"
             )}
-            title="Toggle 5-year projection section in summary and PDF"
+            title={`Toggle ${projectionLabel} projection section in summary and PDF`}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={includeFiveYear ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
             </svg>
-            5-Year Projection
+            {projectionLabel} Projection
           </button>
           <button
             onClick={() => setIncludePayback((v) => !v)}
@@ -524,10 +526,10 @@ export function Tab5Executive() {
               </div>
             </div>
 
-            {/* 5-Year Summary */}
+            {/* Projection Summary */}
             {includeFiveYear && (
             <div>
-              <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">5-Year Value Creation</p>
+              <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">{projectionLabel} Value Creation</p>
               <div className="grid grid-cols-5 gap-3 mb-4">
                 {yearlyProjections.map((y) => (
                   <div key={y.year} className="rounded-xl p-3 bg-navy-800/60 border border-white/10 text-center">
@@ -544,11 +546,11 @@ export function Tab5Executive() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="rounded-xl p-4 bg-gold-500/8 border border-gold-500/20 text-center">
-                  <p className="text-white/40 text-xs font-sans mb-1">5-Year Total Impact</p>
+                  <p className="text-white/40 text-xs font-sans mb-1">{projectionLabel} Total Impact</p>
                   <p className="text-gold-400 font-serif font-bold text-xl">{formatCurrency(totalFiveYearImpact, currency, true)}</p>
                 </div>
                 <div className="rounded-xl p-4 bg-emerald-brand/8 border border-emerald-brand/20 text-center">
-                  <p className="text-white/40 text-xs font-sans mb-1">5-Year Net Benefit</p>
+                  <p className="text-white/40 text-xs font-sans mb-1">{projectionLabel} Net Benefit</p>
                   <p className="text-emerald-brand font-serif font-bold text-xl">{formatCurrency(totalFiveYearNet, currency, true)}</p>
                 </div>
                 <div className="rounded-xl p-4 bg-[#7459EE]/8 border border-[#7459EE]/20 text-center">
@@ -596,7 +598,7 @@ export function Tab5Executive() {
                     <span className="text-emerald-brand font-semibold">RevPAR improvement of {proj.currentRevPAR > 0 ? (((proj.newRevPAR - proj.currentRevPAR) / proj.currentRevPAR) * 100).toFixed(1) : "0"}%</span>{" "}
                     on {Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory{isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""} delivers{" "}
                     <span className="text-gold-400 font-bold">{proj.roiMultiple.toFixed(1)}x</span> ROI annually
-                    {includeFiveYear && <> — and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over 5 years</>}.
+                    {includeFiveYear && <> — and <span className="text-emerald-brand font-bold">{fiveYearROIMultiple.toFixed(1)}x</span> over {projectionYears} years</>}.
                   </p>
                   <p className="text-white/40 text-xs font-sans mt-3">
                     {SCENARIO_LABELS[scenario]} scenario projects {formatCurrency(proj.totalAnnualImpact, currency, true)} annual financial impact

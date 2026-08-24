@@ -44,8 +44,10 @@ export function Tab3FiveYear() {
   const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
   const yearlyCosts = computeDuettoYearlyCosts(effectiveInputs);
   const contractYears = effectiveInputs.initialContractYears || 1;
+  const projectionYears = inputs.projectionYears || 5;
+  const projectionLabel = `${projectionYears}-Year`;
   const hasImplementationFee = (effectiveInputs.implementationFee || 0) > 0;
-  const hasEscalation = contractYears <= 4; // escalation kicks in within the 5-yr window
+  const hasEscalation = contractYears <= projectionYears; // escalation kicks in within the projection window
   const asmp = assumptions[scenario];
 
   const totalFiveYearImpact = yearlyProjections.reduce((sum, y) => sum + y.totalImpact, 0);
@@ -122,7 +124,7 @@ export function Tab3FiveYear() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif font-bold text-white">5-Year Financial Projection</h2>
+          <h2 className="text-2xl font-serif font-bold text-white">{projectionLabel} Financial Projection</h2>
           <p className="text-white/40 text-sm font-sans mt-1">
             Long-term compounding value — the strategic case for asset managers and owners
           </p>
@@ -144,17 +146,17 @@ export function Tab3FiveYear() {
       {/* Key callout cards */}
       <div className="grid grid-cols-4 gap-4">
         <CalloutBadge
-          label="5-Year Total Impact"
+          label={`${projectionLabel} Total Impact`}
           value={formatCurrency(totalFiveYearImpact, currency, true)}
           sub="Cumulative revenue + savings"
         />
         <CalloutBadge
-          label="5-Year Net Benefit"
+          label={`${projectionLabel} Net Benefit`}
           value={formatCurrency(totalFiveYearNet, currency, true)}
           sub="After Duetto investment"
         />
         <CalloutBadge
-          label="5-Year ROI Multiple"
+          label={`${projectionLabel} ROI Multiple`}
           value={`${fiveYearROIMultiple.toFixed(1)}x`}
           sub="Total impact ÷ total investment"
         />
@@ -175,7 +177,7 @@ export function Tab3FiveYear() {
           {hasImplementationFee && `Year 1 Duetto investment includes one-time implementation fee (${formatCurrency(effectiveInputs.implementationFee || 0, currency)}). `}
           {hasEscalation
             ? `Annual subscription escalates +5%/yr from Year ${contractYears + 1} (after initial ${contractYears}-year term).`
-            : "No price escalation within the 5-year window (contract term covers full period)."}
+            : `No price escalation within the ${projectionLabel} window (contract term covers full period).`}
         </p>
         <div className="grid grid-cols-2 gap-8">
           <InputField label="Annual Market Growth Rate" tooltip="Market-wide ADR/RevPAR growth assumption applied to compound projections">
@@ -205,9 +207,9 @@ export function Tab3FiveYear() {
         </div>
       </div>
 
-      {/* 5-Year Area Chart */}
+      {/* Projection Area Chart */}
       <div className="glass-card rounded-2xl p-6 border border-white/8">
-        <h3 className="text-white font-serif font-semibold mb-1">Revenue Impact Over 5 Years</h3>
+        <h3 className="text-white font-serif font-semibold mb-1">Revenue Impact Over {projectionYears} Years</h3>
         <p className="text-white/40 text-xs font-sans mb-5">Stacked annual financial impact by source</p>
         <ResponsiveContainer width="100%" height={250}>
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -272,7 +274,7 @@ export function Tab3FiveYear() {
                 {YEAR_LABELS.map((y) => (
                   <th key={y} className="text-right text-white/40 text-xs uppercase tracking-wider pb-3 px-3">{y}</th>
                 ))}
-                <th className="text-right text-gold-500 text-xs uppercase tracking-wider pb-3 pl-3 border-l border-white/10">5-Year Total</th>
+                <th className="text-right text-gold-500 text-xs uppercase tracking-wider pb-3 pl-3 border-l border-white/10">{projectionLabel} Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -400,12 +402,12 @@ export function Tab3FiveYear() {
       <div className="grid grid-cols-3 gap-4">
         {[
           {
-            text: `In 5 years, Duetto is projected to generate ${formatCurrency(totalFiveYearNet, currency, true)} in net incremental value for ${inputs.propertyName || (isPortfolioMode ? "your portfolio" : "your property")} — driven by sustained RevPAR improvement on ${Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory${isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""}.`,
+            text: `In ${projectionYears} years, Duetto is projected to generate ${formatCurrency(totalFiveYearNet, currency, true)} in net incremental value for ${inputs.propertyName || (isPortfolioMode ? "your portfolio" : "your property")} — driven by sustained RevPAR improvement on ${Math.round(effectiveInputs.yieldablePercent * 100)}% yieldable inventory${isPortfolioMode ? ` across ${portfolioProperties.length} properties` : ""}.`,
             color: "border-gold-500/30 bg-gold-500/5",
             textColor: "text-gold-400",
           },
           {
-            text: `For every $1 invested in Duetto, ${inputs.propertyName || (isPortfolioMode ? "the portfolio" : "your property")} receives ${fiveYearROIMultiple.toFixed(1)}x back over 5 years through compounding RevPAR growth and group rate optimization.`,
+            text: `For every $1 invested in Duetto, ${inputs.propertyName || (isPortfolioMode ? "the portfolio" : "your property")} receives ${fiveYearROIMultiple.toFixed(1)}x back over ${projectionYears} years through compounding RevPAR growth and group rate optimization.`,
             color: "border-emerald-brand/30 bg-emerald-brand/5",
             textColor: "text-emerald-brand",
           },
