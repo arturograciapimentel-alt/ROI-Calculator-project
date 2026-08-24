@@ -838,6 +838,21 @@ export function Tab1PropertyProfile() {
                 </SelectInput>
               </InputField>
 
+              {/* Projection years */}
+              <InputField
+                label="Projection Period"
+                tooltip="Number of years to include in the 5-year projection. Choose 3, 5, or 10 years depending on your analysis needs."
+              >
+                <SelectInput
+                  value={String(inputs.projectionYears || 5)}
+                  onChange={(e) => update("projectionYears", parseInt(e.target.value))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((y) => (
+                    <option key={y} value={y}>{y} {y === 1 ? "year" : "years"}</option>
+                  ))}
+                </SelectInput>
+              </InputField>
+
               {/* Subscription cost */}
               <InputField
                 label={`Annual Subscription Cost — ${duettoSym}`}

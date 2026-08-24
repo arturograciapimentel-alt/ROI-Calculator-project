@@ -303,6 +303,42 @@ export function Tab2ROIProjection() {
             <p className="text-white/20 text-[10px] font-sans">demand intelligence</p>
           </div>
         </div>
+
+        {/* Market Growth Rate */}
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <p className="text-white/60 text-xs font-sans uppercase tracking-wider mb-3">Long-term Market Growth</p>
+          <InputField
+            label=""
+            tooltip="Annual market growth rate for your region. Used to project revenue impact over the projection period."
+          >
+            <SliderInput
+              value={Math.round((asmp.marketGrowthRate || 0) * 100)}
+              min={0}
+              max={10}
+              step={0.5}
+              onChange={(v) => updateAssumption(scenario, "marketGrowthRate", v / 100)}
+              formatValue={(v) => `+${(v * 0.01).toFixed(2)}%`}
+            />
+          </InputField>
+        </div>
+
+        {/* RevPAR Uplift Degradation */}
+        <div className="mt-4">
+          <p className="text-white/60 text-xs font-sans uppercase tracking-wider mb-3">Competitive Response</p>
+          <InputField
+            label=""
+            tooltip="Annual degradation of your RevPAR advantage as competitors implement similar strategies. 0% = maintain advantage; 5% = lose 5% of uplift per year."
+          >
+            <SliderInput
+              value={Math.round((asmp.revparUpliftDegradationRate ?? 0) * 100)}
+              min={0}
+              max={10}
+              step={0.5}
+              onChange={(v) => updateAssumption(scenario, "revparUpliftDegradationRate", v / 100)}
+              formatValue={(v) => `${(v * 0.01).toFixed(2)}% decay/yr`}
+            />
+          </InputField>
+        </div>
       </div>
 
       {/* Revenue Component Cards — RevPAR focused */}

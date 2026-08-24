@@ -130,14 +130,17 @@ export const DEFAULT_ASSUMPTIONS = {
   conservative: {
     revparUpliftPercent: 0.05, // 5% RevPAR uplift
     marketGrowthRate: 0.02,
+    revparUpliftDegradationRate: 0.03, // 3% annual degradation (competitors catch up faster)
   },
   moderate: {
     revparUpliftPercent: 0.08, // 8% RevPAR uplift
     marketGrowthRate: 0.025,
+    revparUpliftDegradationRate: 0.02, // 2% annual degradation
   },
   aggressive: {
     revparUpliftPercent: 0.12, // 12% RevPAR uplift
     marketGrowthRate: 0.03,
+    revparUpliftDegradationRate: 0.01, // 1% annual degradation (maintain advantage longer)
   },
 };
 
@@ -290,7 +293,8 @@ export function calculateYearlyProjections(
   inputs: PropertyInputs,
   assumptions: ScenarioAssumptions,
   hourlyLaborRate: number,
-  rmsEffectiveness: number[] = DEFAULT_RMS_EFFECTIVENESS
+  rmsEffectiveness: number[] = DEFAULT_RMS_EFFECTIVENESS,
+  projectionYears: number = 5
 ): YearlyProjection[] {
   const baseProjection = calculateROI(inputs, assumptions, hourlyLaborRate, rmsEffectiveness);
   const yearlyCosts = computeDuettoYearlyCosts(inputs);
@@ -300,15 +304,20 @@ export function calculateYearlyProjections(
   // Year 1 ramp = average monthly effectiveness across the 12-month schedule
   const year1Ramp = rmsEffectiveness.reduce((s, e) => s + e, 0) / Math.max(rmsEffectiveness.length, 1);
 
-  for (let year = 1; year <= 5; year++) {
+  // RevPAR uplift degradation: each year applies a decay factor
+  const degradationRate = assumptions.revparUpliftDegradationRate ?? 0;
+
+  for (let year = 1; year <= projectionYears; year++) {
     const marketMultiplier = Math.pow(1 + assumptions.marketGrowthRate, year - 1);
     const rampFactor = year === 1 ? year1Ramp : 1.0;
+    // Apply degradation: uplift decays by (1 - degradationRate) per year
+    const degradationMultiplier = Math.pow(1 - degradationRate, year - 1);
     const incrementalRevenue =
-      baseProjection.totalIncrementalRevenue * marketMultiplier * rampFactor;
+      baseProjection.totalIncrementalRevenue * marketMultiplier * rampFactor * degradationMultiplier;
     const costSavings =
-      baseProjection.totalCostSavings * marketMultiplier * rampFactor;
+      baseProjection.totalCostSavings * marketMultiplier * rampFactor * degradationMultiplier;
     const totalImpact = incrementalRevenue + costSavings;
-    const duettoInvestment = yearlyCosts[year - 1];
+    const duettoInvestment = yearlyCosts[Math.min(year - 1, 4)]; // Cap at 5-year cost array
     const netBenefit = totalImpact - duettoInvestment;
     cumulativeNetBenefit += netBenefit;
     const roiPercent = duettoInvestment > 0
@@ -409,6 +418,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   implementationFee: 15000,
   ohipConnectivityFee: 0,
   initialContractYears: 2,
+  projectionYears: 5,
   duettoAnnualCost: 42000,
 };
 

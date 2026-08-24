@@ -131,7 +131,8 @@ function recalculate(
     effectiveInputs,
     assumptions.moderate,
     hourlyLaborRate,
-    rmsEffectiveness
+    rmsEffectiveness,
+    effectiveInputs.projectionYears
   );
 
   return { projections, yearlyProjections, duettoAnnualCost };
