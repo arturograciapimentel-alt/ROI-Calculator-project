@@ -32,7 +32,7 @@ const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
 export function Tab5Executive() {
   const {
-    inputs, projections, scenario, yearlyProjections, capRate,
+    inputs, projections, scenario, yearlyProjections,
     preparedBy, nextSteps, setPreparedBy, setNextSteps, portfolioProperties,
     outputCurrency, setOutputCurrency, exchangeRates, costarBenchmarks,
   } = useCalculatorStore();
@@ -81,6 +81,17 @@ export function Tab5Executive() {
   // How many percentage points above the market segment trend
   const outperformancePP = segmentYoY !== null ? projectedRevPARPct - segmentYoY.revparPct : null;
 
+  // Performance indices vs. the CoStar segment average (RGI/ARI/MPI) — industry-standard
+  // benchmarking terms. NOTE: this compares against the segment/class average from the
+  // uploaded CoStar report, not a curated competitive set.
+  const segmentMetrics = primaryBenchmark?.byClass[segmentKey] ?? null;
+  const benchmarkCurrency = primaryBenchmark?.currency ?? "USD";
+  const propADRForIndex = convertCurrency(normalizedInputs.currentADR, currency, benchmarkCurrency, exchangeRates);
+  const propRevPARForIndex = convertCurrency(currentRevPAR, currency, benchmarkCurrency, exchangeRates);
+  const ariIndex = segmentMetrics && segmentMetrics.adr > 0 ? (propADRForIndex / segmentMetrics.adr) * 100 : null;
+  const mpiIndex = segmentMetrics && segmentMetrics.occupancy > 0 ? (normalizedInputs.currentOccupancy / segmentMetrics.occupancy) * 100 : null;
+  const rgiIndex = segmentMetrics && segmentMetrics.revpar > 0 ? (propRevPARForIndex / segmentMetrics.revpar) * 100 : null;
+
   // Build exchange rate disclosure for any currency that differs from outputCurrency
   const sourceCurrencies = new Set<string>();
   if (inputs.currency !== currency) sourceCurrencies.add(inputs.currency);
@@ -95,8 +106,6 @@ export function Tab5Executive() {
   const totalFiveYearImpact = yearlyProjections.reduce((s, y) => s + y.totalImpact, 0);
   const totalFiveYearInvestment = yearlyProjections.reduce((s, y) => s + y.duettoInvestment, 0);
   const fiveYearROIMultiple = totalFiveYearInvestment > 0 ? totalFiveYearImpact / totalFiveYearInvestment : 0;
-  const incrementalNOI = (yearlyProjections[yearlyProjections.length - 1]?.totalImpact || 0) * 0.85;
-  const valuationImpact = incrementalNOI / capRate;
 
   const adrContrib = proj.incrementalADRRevenue;
   const occContrib = proj.incrementalOccRevenue;
@@ -492,6 +501,41 @@ export function Tab5Executive() {
                       : `Market segment is growing faster than current projection; consider a more aggressive scenario.`}
                   </p>
                 )}
+
+                {/* Performance Index (RGI/ARI/MPI) — current standing vs. segment average */}
+                {(ariIndex !== null || mpiIndex !== null || rgiIndex !== null) && (
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-3 text-center">
+                      Current Performance Index — vs. {PROPERTY_TYPE_LABELS[inputs.propertyType]} Segment Average
+                    </p>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="rounded-xl p-3 bg-navy-800/60 border border-white/10 text-center">
+                        <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1">ARI</p>
+                        <p className={`text-xl font-serif font-bold ${ariIndex !== null && ariIndex >= 100 ? "text-white" : "text-[#FF5900]"}`}>
+                          {ariIndex !== null ? ariIndex.toFixed(0) : "—"}
+                        </p>
+                        <p className="text-white/25 text-[10px] font-sans mt-0.5">ADR Index</p>
+                      </div>
+                      <div className="rounded-xl p-3 bg-navy-800/60 border border-white/10 text-center">
+                        <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1">MPI</p>
+                        <p className={`text-xl font-serif font-bold ${mpiIndex !== null && mpiIndex >= 100 ? "text-white" : "text-[#FF5900]"}`}>
+                          {mpiIndex !== null ? mpiIndex.toFixed(0) : "—"}
+                        </p>
+                        <p className="text-white/25 text-[10px] font-sans mt-0.5">Occupancy Index</p>
+                      </div>
+                      <div className="rounded-xl p-3 bg-navy-800/60 border border-white/10 text-center">
+                        <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1">RGI</p>
+                        <p className={`text-xl font-serif font-bold ${rgiIndex !== null && rgiIndex >= 100 ? "text-white" : "text-[#FF5900]"}`}>
+                          {rgiIndex !== null ? rgiIndex.toFixed(0) : "—"}
+                        </p>
+                        <p className="text-white/25 text-[10px] font-sans mt-0.5">RevPAR Index</p>
+                      </div>
+                    </div>
+                    <p className="text-white/20 text-[10px] font-sans mt-3 text-center">
+                      100 = performance at parity with the {PROPERTY_TYPE_LABELS[inputs.propertyType]} segment average. Benchmarked against the CoStar segment/class average for {primaryBenchmark.marketName}, not a curated competitive set.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -570,8 +614,8 @@ export function Tab5Executive() {
                   <p className="text-emerald-brand font-serif font-bold text-xl">{formatCurrency(totalFiveYearNet, currency, true)}</p>
                 </div>
                 <div className="rounded-xl p-4 bg-[#7459EE]/8 border border-[#7459EE]/20 text-center">
-                  <p className="text-white/40 text-xs font-sans mb-1">Property Valuation +</p>
-                  <p className="text-[#7459EE] font-serif font-bold text-xl">{formatCurrency(valuationImpact, currency, true)}</p>
+                  <p className="text-white/40 text-xs font-sans mb-1">{projectionLabel} ROI Multiple</p>
+                  <p className="text-[#7459EE] font-serif font-bold text-xl">{fiveYearROIMultiple.toFixed(1)}x</p>
                 </div>
               </div>
             </div>

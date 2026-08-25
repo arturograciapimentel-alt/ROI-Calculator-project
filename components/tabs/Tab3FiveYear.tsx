@@ -18,7 +18,7 @@ const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
   { value: "AUD", label: "AUD (A$)" },
   { value: "JPY", label: "JPY (¥)" },
 ];
-import { formatCurrency, formatPercent, estimateDuettoCost, computeDuettoAnnualCost, computeDuettoYearlyCosts, aggregatePortfolioInputs } from "@/lib/calculations";
+import { formatCurrency, estimateDuettoCost, computeDuettoAnnualCost, computeDuettoYearlyCosts, aggregatePortfolioInputs } from "@/lib/calculations";
 import { clsx } from "clsx";
 
 function yearLabels(count: number): string[] {
@@ -39,7 +39,7 @@ function CalloutBadge({ label, value, sub }: { label: string; value: string; sub
 }
 
 export function Tab3FiveYear() {
-  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, capRate, setCapRate, portfolioProperties, outputCurrency, setOutputCurrency } = useCalculatorStore();
+  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, portfolioProperties, outputCurrency, setOutputCurrency } = useCalculatorStore();
   const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
@@ -57,10 +57,8 @@ export function Tab3FiveYear() {
   const totalFiveYearInvestment = yearlyProjections.reduce((sum, y) => sum + y.duettoInvestment, 0);
   const fiveYearROIMultiple = totalFiveYearImpact / totalFiveYearInvestment;
 
-  // Valuation impact uses moderate scenario final-year incremental NOI
+  // Final-year projection, used by the revenue waterfall chart
   const year5Projection = yearlyProjections[yearlyProjections.length - 1];
-  const incrementalNOI = year5Projection ? year5Projection.totalImpact * 0.85 : 0; // ~85% flows to NOI
-  const valuationImpact = incrementalNOI / capRate;
 
   // Break-even month calculation
   const monthlyImpact = yearlyProjections[0] ? yearlyProjections[0].totalImpact / 12 : 0;
@@ -196,16 +194,16 @@ export function Tab3FiveYear() {
           </InputField>
 
           <InputField
-            label="Cap Rate (for valuation impact)"
-            tooltip="The capitalization rate used to convert incremental NOI into property valuation impact"
+            label="RevPAR Uplift Degradation"
+            tooltip="Annual erosion of the RevPAR advantage as competitors catch up. 0% = maintain advantage indefinitely."
           >
             <SliderInput
-              value={Math.round(capRate * 100 * 10) / 10}
-              min={4}
-              max={12}
+              value={Math.round((asmp.revparUpliftDegradationRate ?? 0) * 100)}
+              min={0}
+              max={10}
               step={0.5}
-              onChange={(v) => setCapRate(v / 100)}
-              formatValue={(v) => `${v}%`}
+              onChange={(v) => updateAssumption(scenario, "revparUpliftDegradationRate", v / 100)}
+              formatValue={(v) => `${v}%/year`}
             />
           </InputField>
         </div>
@@ -356,52 +354,6 @@ export function Tab3FiveYear() {
         </div>
       </div>
 
-      {/* Valuation Impact — Owner/Investor section */}
-      <div className="glass-card rounded-2xl p-6 border border-emerald-brand/30 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-brand/5 to-transparent" />
-        <div className="relative z-10">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-emerald-brand/15">
-              <svg className="w-6 h-6 text-emerald-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-white font-serif font-bold text-xl mb-1">Asset Valuation Impact</h3>
-              <p className="text-white/50 text-sm font-sans">
-                For asset managers and owners — incremental NOI drives property valuation
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-6 mt-6">
-            <div className="text-center p-4 rounded-xl bg-navy-800/60 border border-white/10">
-              <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-2">Year {projectionYears} Incremental NOI</p>
-              <p className="text-2xl font-serif font-bold text-emerald-brand">
-                {formatCurrency(incrementalNOI, currency, true)}
-              </p>
-              <p className="text-white/30 text-xs font-sans mt-1">85% of Yr {projectionYears} impact → NOI</p>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-navy-800/60 border border-white/10">
-              <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-2">Cap Rate Applied</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatPercent(capRate)}</p>
-              <p className="text-white/30 text-xs font-sans mt-1">Adjustable above</p>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-emerald-brand/10 border border-emerald-brand/30">
-              <p className="text-emerald-brand text-xs font-sans uppercase tracking-wider mb-2 font-semibold">Implied Valuation Increase</p>
-              <p className="text-3xl font-serif font-bold text-emerald-brand">
-                {formatCurrency(valuationImpact, currency, true)}
-              </p>
-              <p className="text-emerald-brand/50 text-xs font-sans mt-1">Incremental NOI ÷ Cap Rate</p>
-            </div>
-          </div>
-
-          <p className="text-white/30 text-xs font-sans mt-4 text-center">
-            Property Valuation Increase = Incremental NOI / Cap Rate · Formula used by institutional real estate investors
-          </p>
-        </div>
-      </div>
-
       {/* Narrative callouts */}
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -416,7 +368,7 @@ export function Tab3FiveYear() {
             textColor: "text-emerald-brand",
           },
           {
-            text: `The implied property valuation increase from Duetto's RevPAR impact is ${formatCurrency(valuationImpact, currency, true)} at a ${formatPercent(capRate)} cap rate.`,
+            text: `Annual impact grows from ${formatCurrency(yearlyProjections[0]?.totalImpact || 0, currency, true)} in Year 1 to ${formatCurrency(year5Projection?.totalImpact || 0, currency, true)} by Year ${projectionYears}, as the RMS effectiveness ramp completes and compounding market growth takes hold.`,
             color: "border-[#7459EE]/30 bg-[#7459EE]/5",
             textColor: "text-[#7459EE]",
           },
