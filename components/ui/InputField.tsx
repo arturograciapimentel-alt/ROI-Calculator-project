@@ -3,7 +3,7 @@ import React from "react";
 import { clsx } from "clsx";
 
 interface InputFieldProps {
-  label: string;
+  label: React.ReactNode;
   tooltip?: string;
   children: React.ReactNode;
   className?: string;

@@ -43,12 +43,14 @@ type CalculatorStore = CalculatorState & {
   addCostarBenchmark: (data: CoStarBenchmark) => void;
   removeCostarBenchmark: (id: string) => void;
   updateCostarBenchmarkCurrency: (id: string, currency: Currency) => void;
+  updateCostarBenchmarkField: (id: string, updates: Partial<Pick<CoStarBenchmark, "forecastRevPARGrowthPct" | "transientRevPARGrowthPct" | "groupRevPARGrowthPct">>) => void;
   setPortfolioProperties: (props: PortfolioProperty[]) => void;
   updatePortfolioProperty: (id: string, updates: Partial<Omit<PortfolioProperty, "id">>) => void;
   setDuettoHotelCount: (benchmarkId: string, count: number) => void;
   updateDuettoHotel: (benchmarkId: string, hotelId: string, updates: Partial<Omit<DuettoMarketHotel, "id">>) => void;
   updateDuettoMarketCurrency: (benchmarkId: string, currency: Currency) => void;
   applyMarketSignal: (conservative: number, moderate: number, aggressive: number) => void;
+  applyMarketGrowthSignal: (conservative: number, moderate: number, aggressive: number) => void;
   setOutputCurrency: (currency: Currency) => void;
   updateExchangeRate: (currency: Currency, rate: number) => void;
   setRmsEffectiveness: (values: number[]) => void;
@@ -148,6 +150,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
       portfolioProperties: [],
       scenario: "moderate",
       marketSignalApplied: false,
+      marketGrowthCalibrated: false,
       outputCurrency: "USD",
       exchangeRates: { ...DEFAULT_EXCHANGE_RATES } as Record<Currency, number>,
       rmsEffectivenessMonthly: [...DEFAULT_RMS_EFFECTIVENESS],
@@ -244,7 +247,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.exchangeRates,
           state.rmsEffectivenessMonthly
         );
-        set({ assumptions, projections, yearlyProjections, marketSignalApplied: false });
+        set({ assumptions, projections, yearlyProjections, marketSignalApplied: false, marketGrowthCalibrated: false });
       },
 
       applyMarketSignal: (conservative, moderate, aggressive) => {
@@ -265,6 +268,26 @@ export const useCalculatorStore = create<CalculatorStore>()(
           state.rmsEffectivenessMonthly
         );
         set({ assumptions, projections, yearlyProjections, marketSignalApplied: true });
+      },
+
+      applyMarketGrowthSignal: (conservative, moderate, aggressive) => {
+        const state = get();
+        const assumptions = {
+          conservative: { ...state.assumptions.conservative, marketGrowthRate: conservative },
+          moderate:     { ...state.assumptions.moderate,     marketGrowthRate: moderate     },
+          aggressive:   { ...state.assumptions.aggressive,   marketGrowthRate: aggressive   },
+        };
+        const { projections, yearlyProjections } = recalculate(
+          state.inputs,
+          assumptions,
+          state.hourlyLaborRate,
+          state.capRate,
+          state.portfolioProperties,
+          state.outputCurrency,
+          state.exchangeRates,
+          state.rmsEffectivenessMonthly
+        );
+        set({ assumptions, projections, yearlyProjections, marketGrowthCalibrated: true });
       },
 
       loadSampleData: () => {
@@ -397,6 +420,14 @@ export const useCalculatorStore = create<CalculatorStore>()(
         const state = get();
         const costarBenchmarks = state.costarBenchmarks.map((b) =>
           b.id === id ? { ...b, currency } : b
+        );
+        set({ costarBenchmarks });
+      },
+
+      updateCostarBenchmarkField: (id, updates) => {
+        const state = get();
+        const costarBenchmarks = state.costarBenchmarks.map((b) =>
+          b.id === id ? { ...b, ...updates } : b
         );
         set({ costarBenchmarks });
       },

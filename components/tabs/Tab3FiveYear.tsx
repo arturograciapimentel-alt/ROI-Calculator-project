@@ -39,7 +39,7 @@ function CalloutBadge({ label, value, sub }: { label: string; value: string; sub
 }
 
 export function Tab3FiveYear() {
-  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, portfolioProperties, outputCurrency, setOutputCurrency } = useCalculatorStore();
+  const { inputs, yearlyProjections, assumptions, scenario, updateAssumption, portfolioProperties, outputCurrency, setOutputCurrency, marketGrowthCalibrated } = useCalculatorStore();
   const currency = outputCurrency;
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
@@ -182,7 +182,22 @@ export function Tab3FiveYear() {
             : `No price escalation within the ${projectionLabel} window (contract term covers full period).`}
         </p>
         <div className="grid grid-cols-2 gap-8">
-          <InputField label="Annual Market Growth Rate" tooltip="Market-wide ADR/RevPAR growth assumption applied to compound projections">
+          <InputField
+            label={
+              <span className="flex items-center gap-2">
+                Annual Market Growth Rate
+                {marketGrowthCalibrated && (
+                  <span className="flex items-center gap-1 text-[9px] font-bold bg-[#7459EE]/20 text-[#7459EE] px-1.5 py-0.5 rounded-full uppercase">
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Market Calibrated
+                  </span>
+                )}
+              </span>
+            }
+            tooltip="Market-wide ADR/RevPAR growth assumption applied to compound projections"
+          >
             <SliderInput
               value={Math.round(asmp.marketGrowthRate * 100)}
               min={0}

@@ -163,6 +163,15 @@ export interface CoStarBenchmark {
     "upscale-upper-midscale"?: CoStarHistoricalRow[];
     "midscale-economy"?: CoStarHistoricalRow[];
   };
+  /** CoStar's own forward-looking RevPAR growth estimate for the overall market
+   *  (fraction, e.g. 0.169 = 16.9%), parsed from the report's "Average Trend"
+   *  table's Forecast Average column. Overall market only, not per-segment. */
+  forecastRevPARGrowthPct?: number | null;
+  /** Market-wide transient RevPAR YoY growth (fraction). Best-effort parse from
+   *  report narrative text; user-editable since phrasing varies by report. */
+  transientRevPARGrowthPct?: number | null;
+  /** Market-wide group RevPAR YoY growth (fraction). Same caveats as transient. */
+  groupRevPARGrowthPct?: number | null;
 }
 
 // One Duetto-client hotel entry in a market (12-month production data)
@@ -212,6 +221,8 @@ export interface CalculatorState {
   costarBenchmarks: CoStarBenchmark[];
   duettoMarketData: DuettoMarketData[];
   marketSignalApplied: boolean;
+  /** True once marketGrowthRate has been synced to CoStar's forecast for all scenarios */
+  marketGrowthCalibrated: boolean;
   /** Currency used for all ROI output display (Tabs 2, 3, 5) */
   outputCurrency: Currency;
   /** Exchange rates relative to USD: 1 USD = N units of currency */

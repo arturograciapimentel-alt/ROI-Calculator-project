@@ -32,7 +32,7 @@ const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
 export function Tab5Executive() {
   const {
-    inputs, projections, scenario, yearlyProjections,
+    inputs, projections, scenario, yearlyProjections, assumptions,
     preparedBy, nextSteps, setPreparedBy, setNextSteps, portfolioProperties,
     outputCurrency, setOutputCurrency, exchangeRates, costarBenchmarks,
   } = useCalculatorStore();
@@ -536,6 +536,61 @@ export function Tab5Executive() {
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Assumed Market Growth vs. CoStar Forecast */}
+            {primaryBenchmark && primaryBenchmark.forecastRevPARGrowthPct != null && (
+              <div className="rounded-2xl border border-white/10 bg-white/3 p-5">
+                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-4">
+                  Market Growth Assumption vs. CoStar Forecast
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl p-4 bg-navy-800/60 border border-white/10 text-center">
+                    <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-2">CoStar Forecast (Overall Market)</p>
+                    <p className="text-2xl font-serif font-bold text-white">
+                      +{(primaryBenchmark.forecastRevPARGrowthPct * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-white/30 text-[10px] font-sans mt-1">RevPAR growth · {primaryBenchmark.marketName}</p>
+                  </div>
+                  <div className="rounded-xl p-4 bg-emerald-brand/10 border border-emerald-brand/30 text-center">
+                    <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-2">Assumed ({SCENARIO_LABELS[scenario]})</p>
+                    <p className="text-2xl font-serif font-bold text-emerald-brand">
+                      +{(assumptions[scenario].marketGrowthRate * 100).toFixed(1)}%/yr
+                    </p>
+                    <p className="text-white/30 text-[10px] font-sans mt-1">Used in {projectionLabel} projection</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Transient vs. Group market trend — supporting narrative for yieldable-inventory model */}
+            {primaryBenchmark && (primaryBenchmark.transientRevPARGrowthPct != null || primaryBenchmark.groupRevPARGrowthPct != null) && (
+              <div className="rounded-2xl border border-white/10 bg-white/3 p-5">
+                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">
+                  Transient vs. Group Market Trend
+                </p>
+                <p className="text-white/60 text-sm font-sans leading-relaxed">
+                  {primaryBenchmark.transientRevPARGrowthPct != null && primaryBenchmark.groupRevPARGrowthPct != null ? (
+                    <>
+                      Market data for {primaryBenchmark.marketName} shows transient RevPAR
+                      {" "}{primaryBenchmark.transientRevPARGrowthPct >= 0 ? "growing" : "declining"} {primaryBenchmark.transientRevPARGrowthPct >= 0 ? "+" : ""}{(primaryBenchmark.transientRevPARGrowthPct * 100).toFixed(1)}%
+                      {" "}vs. group RevPAR at {primaryBenchmark.groupRevPARGrowthPct >= 0 ? "+" : ""}{(primaryBenchmark.groupRevPARGrowthPct * 100).toFixed(1)}%.
+                      {primaryBenchmark.transientRevPARGrowthPct > primaryBenchmark.groupRevPARGrowthPct
+                        ? " This reinforces the opportunity in the yieldable, transient-driven inventory Duetto's dynamic pricing optimizes."
+                        : " Group demand is currently outpacing transient in this market — worth revisiting the yieldable inventory assumption."}
+                    </>
+                  ) : (
+                    <>
+                      {primaryBenchmark.transientRevPARGrowthPct != null && (
+                        <>Market transient RevPAR is {primaryBenchmark.transientRevPARGrowthPct >= 0 ? "growing" : "declining"} {primaryBenchmark.transientRevPARGrowthPct >= 0 ? "+" : ""}{(primaryBenchmark.transientRevPARGrowthPct * 100).toFixed(1)}% in {primaryBenchmark.marketName}.</>
+                      )}
+                      {primaryBenchmark.groupRevPARGrowthPct != null && (
+                        <>Market group RevPAR is {primaryBenchmark.groupRevPARGrowthPct >= 0 ? "growing" : "declining"} {primaryBenchmark.groupRevPARGrowthPct >= 0 ? "+" : ""}{(primaryBenchmark.groupRevPARGrowthPct * 100).toFixed(1)}% in {primaryBenchmark.marketName}.</>
+                      )}
+                    </>
+                  )}
+                </p>
               </div>
             )}
 

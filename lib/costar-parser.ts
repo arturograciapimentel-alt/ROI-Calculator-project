@@ -138,6 +138,40 @@ function extractClassHistorical(
   return extractHistoricalFromSlice(text.slice(startIdx, endIdx));
 }
 
+function extractForecastRevPARGrowth(text: string): number | null {
+  // "Average Trend" table, overall market: rows are Occupancy/Occupancy Change/
+  // ADR/ADR Change/RevPAR/RevPAR Change, each with 5 columns (Current, 3 Mo,
+  // YTD, 12 Mo Historical Average, Forecast Average). We want the 5th value
+  // on the "RevPAR Change" row.
+  const startIdx = text.indexOf("Average Trend");
+  if (startIdx < 0) return null;
+  const slice = text.slice(startIdx, startIdx + 2000);
+  const m = slice.match(
+    /RevPAR\s+Change\s+([-\d.]+)%\s+([-\d.]+)%\s+([-\d.]+)%\s+([-\d.]+)%\s+([-\d.]+)%/
+  );
+  if (!m) return null;
+  return parseNum(m[5]) / 100;
+}
+
+function extractSegmentRevPARGrowth(text: string, segment: "transient" | "group"): number | null {
+  // Best-effort parse of narrative sentences like:
+  // "the 12-month transient RevPAR grew by 2.0%" / "group RevPAR change was flat"
+  // Phrasing varies by report, so this is intentionally lenient and falls
+  // back to manual entry in the UI when it doesn't match.
+  const growRe = new RegExp(`${segment}\\s+RevPAR\\s+(?:grew|increased|rose)\\s+by\\s+([\\d.]+)%`, "i");
+  let m = text.match(growRe);
+  if (m) return parseNum(m[1]) / 100;
+
+  const declineRe = new RegExp(`${segment}\\s+RevPAR\\s+(?:declined|fell|dropped|decreased)\\s+by\\s+([\\d.]+)%`, "i");
+  m = text.match(declineRe);
+  if (m) return -parseNum(m[1]) / 100;
+
+  const flatRe = new RegExp(`${segment}\\s+RevPAR\\s+(?:change\\s+)?was\\s+flat`, "i");
+  if (flatRe.test(text)) return 0;
+
+  return null;
+}
+
 function extractSubmarkets(text: string): CoStarSubmarket[] {
   // Looks for the SUBMARKET PERFORMANCE table.
   // Each row: "#  Name  rank  80.4%  -2.7%  rank  $256.60  -1.6%  rank  $206.38  -4.3%"
@@ -200,6 +234,15 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
   const upsHistorical = extractClassHistorical(text, "UPSCALE & UPPER MIDSCALE PERFORMANCE", "MIDSCALE & ECONOMY PERFORMANCE");
   const midHistorical = extractClassHistorical(text, "MIDSCALE & ECONOMY PERFORMANCE", "SUBMARKET PERFORMANCE");
 
+  const forecastRevPARGrowthPct = extractForecastRevPARGrowth(text);
+  if (forecastRevPARGrowthPct === null) warnings.push("Could not extract CoStar forecast RevPAR growth — you can skip this or the field will be left blank.");
+
+  const transientRevPARGrowthPct = extractSegmentRevPARGrowth(text, "transient");
+  const groupRevPARGrowthPct = extractSegmentRevPARGrowth(text, "group");
+  if (transientRevPARGrowthPct === null || groupRevPARGrowthPct === null) {
+    warnings.push("Could not auto-detect transient/group RevPAR growth from report text — enter manually in Market Context if available.");
+  }
+
   const benchmark: CoStarBenchmark = {
     id: `costar-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     marketName,
@@ -218,6 +261,9 @@ export async function parseCoStarPDF(file: File): Promise<ParseResult> {
       "upscale-upper-midscale": upsHistorical,
       "midscale-economy": midHistorical,
     },
+    forecastRevPARGrowthPct,
+    transientRevPARGrowthPct,
+    groupRevPARGrowthPct,
   };
 
   return { benchmark, warnings };

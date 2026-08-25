@@ -401,6 +401,17 @@ function signalToScenarios(yoyPct: number) {
   };
 }
 
+// Spread CoStar's single forecast RevPAR growth % across the three scenarios.
+// Input/output are fractions (e.g. 0.169), clamped to the sliders' 0-8% range.
+function forecastToGrowthScenarios(forecastFraction: number) {
+  const pct = forecastFraction * 100;
+  return {
+    conservative: Math.max(0, Math.min(8, pct * 0.5)) / 100,
+    moderate:     Math.max(0, Math.min(8, pct))        / 100,
+    aggressive:   Math.max(0, Math.min(8, pct * 1.25)) / 100,
+  };
+}
+
 function MarketSignalPanel({
   signal,
   costarYoY,
@@ -997,9 +1008,10 @@ function DuettoClientHotelsSection({
 
 export function Tab4Market() {
   const {
-    inputs, projections, scenario, costarBenchmarks,
+    inputs, projections, scenario, costarBenchmarks, assumptions,
     addCostarBenchmark, removeCostarBenchmark, portfolioProperties,
-    updateCostarBenchmarkCurrency, outputCurrency, exchangeRates,
+    updateCostarBenchmarkCurrency, updateCostarBenchmarkField, outputCurrency, exchangeRates,
+    applyMarketGrowthSignal, marketGrowthCalibrated,
   } = useCalculatorStore();
   const proj = projections[scenario];
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
@@ -1306,6 +1318,116 @@ export function Tab4Market() {
                 </div>
               </div>
             </div>
+
+            {/* CoStar Forecast RevPAR Growth — calibrate long-term Market Growth Rate */}
+            {primaryBenchmark && (
+              <div className="mt-5 pt-5 border-t border-white/8">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-white/60 text-xs font-sans uppercase tracking-wider mb-1">
+                      CoStar Forecast Average RevPAR Growth
+                    </p>
+                    <p className="text-white/30 text-[10px] font-sans">
+                      Overall market, from the report's Average Trend forecast column — {primaryBenchmark.marketName}
+                    </p>
+                  </div>
+                  {primaryBenchmark.forecastRevPARGrowthPct != null && (
+                    marketGrowthCalibrated ? (
+                      <span className="flex items-center gap-1 text-[10px] font-sans text-emerald-brand bg-emerald-brand/10 border border-emerald-brand/20 px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Applied to scenarios
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const s = forecastToGrowthScenarios(primaryBenchmark.forecastRevPARGrowthPct!);
+                          applyMarketGrowthSignal(s.conservative, s.moderate, s.aggressive);
+                        }}
+                        className="flex items-center gap-1.5 text-[10px] font-sans font-semibold text-[#7459EE] bg-[#7459EE]/15 hover:bg-[#7459EE]/25 border border-[#7459EE]/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap flex-shrink-0"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Sync to Scenarios
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {primaryBenchmark.forecastRevPARGrowthPct != null ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="p-3 rounded-lg bg-navy-800/60 border border-white/10 text-center">
+                      <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1">CoStar Forecast</p>
+                      <p className="text-xl font-serif font-bold text-white">
+                        {(primaryBenchmark.forecastRevPARGrowthPct * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                    {(["conservative", "moderate", "aggressive"] as const).map((s) => (
+                      <div key={s} className="p-3 rounded-lg bg-white/3 border border-white/10 text-center">
+                        <p className="text-white/30 text-[10px] font-sans uppercase tracking-wider mb-1 capitalize">{s} assumption</p>
+                        <p className="text-xl font-serif font-bold text-white/70">
+                          {(assumptions[s].marketGrowthRate * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-white/30 text-xs font-sans">
+                    Not found in this report — the Average Trend forecast table may use different formatting.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Transient vs. Group RevPAR growth — market segmentation context */}
+            {primaryBenchmark && (
+              <div className="mt-5 pt-5 border-t border-white/8">
+                <p className="text-white/60 text-xs font-sans uppercase tracking-wider mb-1">
+                  Transient vs. Group RevPAR Growth
+                </p>
+                <p className="text-white/30 text-[10px] font-sans mb-4">
+                  Market-wide trailing 12-month trend — {primaryBenchmark.marketName}. Auto-detected where possible; edit if the report isn't picked up correctly.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-navy-800/60 border border-white/10">
+                    <label className="text-white/30 text-[10px] font-sans uppercase tracking-wider block mb-1.5">Transient RevPAR Growth</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={primaryBenchmark.transientRevPARGrowthPct != null ? (primaryBenchmark.transientRevPARGrowthPct * 100).toFixed(1) : ""}
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? null : parseFloat(e.target.value) / 100;
+                          updateCostarBenchmarkField(primaryBenchmark.id, { transientRevPARGrowthPct: v });
+                        }}
+                        placeholder="Not detected"
+                        className="bg-transparent text-white text-lg font-serif font-bold w-full focus:outline-none"
+                      />
+                      <span className="text-white/40 text-sm font-sans">%</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-navy-800/60 border border-white/10">
+                    <label className="text-white/30 text-[10px] font-sans uppercase tracking-wider block mb-1.5">Group RevPAR Growth</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={primaryBenchmark.groupRevPARGrowthPct != null ? (primaryBenchmark.groupRevPARGrowthPct * 100).toFixed(1) : ""}
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? null : parseFloat(e.target.value) / 100;
+                          updateCostarBenchmarkField(primaryBenchmark.id, { groupRevPARGrowthPct: v });
+                        }}
+                        placeholder="Not detected"
+                        className="bg-transparent text-white text-lg font-serif font-bold w-full focus:outline-none"
+                      />
+                      <span className="text-white/40 text-sm font-sans">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Historical charts for primary market */}
             {primaryBenchmark && primaryBenchmark.historical.length > 0 && (
