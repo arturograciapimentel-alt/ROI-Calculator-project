@@ -297,7 +297,7 @@ export function calculateYearlyProjections(
   projectionYears: number = 5
 ): YearlyProjection[] {
   const baseProjection = calculateROI(inputs, assumptions, hourlyLaborRate, rmsEffectiveness);
-  const yearlyCosts = computeDuettoYearlyCosts(inputs);
+  const yearlyCosts = computeDuettoYearlyCosts(inputs, projectionYears);
   const years: YearlyProjection[] = [];
   let cumulativeNetBenefit = 0;
 
@@ -317,7 +317,7 @@ export function calculateYearlyProjections(
     const costSavings =
       baseProjection.totalCostSavings * marketMultiplier * rampFactor * degradationMultiplier;
     const totalImpact = incrementalRevenue + costSavings;
-    const duettoInvestment = yearlyCosts[Math.min(year - 1, 4)]; // Cap at 5-year cost array
+    const duettoInvestment = yearlyCosts[year - 1];
     const netBenefit = totalImpact - duettoInvestment;
     cumulativeNetBenefit += netBenefit;
     const roiPercent = duettoInvestment > 0
@@ -369,22 +369,26 @@ export function computeDuettoAnnualCost(inputs: PropertyInputs): number {
 }
 
 /**
- * Per-year Duetto investment for the 5-year projection.
+ * Per-year Duetto investment for the multi-year projection.
  * Year 1: annualCost + implementationFee (one-time)
  * Years 2..contractYears: annualCost (no change in initial term)
- * Years contractYears+1..5: annualCost × 1.05^(year − contractYears)
+ * Years contractYears+1..N: annualCost × (1 + escalationRate)^(year − contractYears)
  */
-export function computeDuettoYearlyCosts(inputs: PropertyInputs): number[] {
+export function computeDuettoYearlyCosts(
+  inputs: PropertyInputs,
+  years: number = 5
+): number[] {
   const annualCost = inputs.duettoAnnualCost > 0
     ? inputs.duettoAnnualCost
     : computeDuettoAnnualCost(inputs);
   const implFee = inputs.implementationFee || 0;
   const contractYears = Math.max(1, inputs.initialContractYears || 1);
+  const escalationRate = inputs.subscriptionEscalationRate ?? 0.05;
 
-  return Array.from({ length: 5 }, (_, i) => {
+  return Array.from({ length: years }, (_, i) => {
     const year = i + 1;
     const recurring = year > contractYears
-      ? annualCost * Math.pow(1.05, year - contractYears)
+      ? annualCost * Math.pow(1 + escalationRate, year - contractYears)
       : annualCost;
     return recurring + (year === 1 ? implFee : 0);
   });
@@ -419,6 +423,7 @@ export const SAMPLE_PROPERTY: PropertyInputs = {
   ohipConnectivityFee: 0,
   initialContractYears: 2,
   projectionYears: 5,
+  subscriptionEscalationRate: 0.05,
   duettoAnnualCost: 42000,
 };
 

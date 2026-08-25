@@ -83,6 +83,7 @@ const DEFAULT_INPUTS: PropertyInputs = {
   ohipConnectivityFee: 0,
   initialContractYears: 1,
   projectionYears: 5,
+  subscriptionEscalationRate: 0.05,
   duettoAnnualCost: 0,
 };
 

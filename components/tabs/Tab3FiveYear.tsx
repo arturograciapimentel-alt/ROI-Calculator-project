@@ -21,7 +21,9 @@ const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
 import { formatCurrency, formatPercent, estimateDuettoCost, computeDuettoAnnualCost, computeDuettoYearlyCosts, aggregatePortfolioInputs } from "@/lib/calculations";
 import { clsx } from "clsx";
 
-const YEAR_LABELS = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+function yearLabels(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `Year ${i + 1}`);
+}
 
 function CalloutBadge({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -42,9 +44,9 @@ export function Tab3FiveYear() {
   const isPortfolioMode = inputs.numberOfProperties > 1 && portfolioProperties.length >= 2;
   const effectiveInputs = isPortfolioMode ? aggregatePortfolioInputs(inputs, portfolioProperties) : inputs;
   const effectiveCost = computeDuettoAnnualCost(effectiveInputs);
-  const yearlyCosts = computeDuettoYearlyCosts(effectiveInputs);
-  const contractYears = effectiveInputs.initialContractYears || 1;
   const projectionYears = inputs.projectionYears || 5;
+  const yearlyCosts = computeDuettoYearlyCosts(effectiveInputs, projectionYears);
+  const contractYears = effectiveInputs.initialContractYears || 1;
   const projectionLabel = `${projectionYears}-Year`;
   const hasImplementationFee = (effectiveInputs.implementationFee || 0) > 0;
   const hasEscalation = contractYears <= projectionYears; // escalation kicks in within the projection window
@@ -55,14 +57,16 @@ export function Tab3FiveYear() {
   const totalFiveYearInvestment = yearlyProjections.reduce((sum, y) => sum + y.duettoInvestment, 0);
   const fiveYearROIMultiple = totalFiveYearImpact / totalFiveYearInvestment;
 
-  // Valuation impact uses moderate scenario year 5 incremental NOI
-  const year5Projection = yearlyProjections[4];
+  // Valuation impact uses moderate scenario final-year incremental NOI
+  const year5Projection = yearlyProjections[yearlyProjections.length - 1];
   const incrementalNOI = year5Projection ? year5Projection.totalImpact * 0.85 : 0; // ~85% flows to NOI
   const valuationImpact = incrementalNOI / capRate;
 
   // Break-even month calculation
   const monthlyImpact = yearlyProjections[0] ? yearlyProjections[0].totalImpact / 12 : 0;
   const breakEvenMonth = monthlyImpact > 0 ? Math.ceil(effectiveCost / monthlyImpact) : 99;
+
+  const YEAR_LABELS = yearLabels(projectionYears);
 
   // Chart data
   const chartData = yearlyProjections.map((y, i) => ({
@@ -75,10 +79,10 @@ export function Tab3FiveYear() {
     net: Math.round(y.netBenefit),
   }));
 
-  const cumulativeChartData = Array.from({ length: 60 }, (_, i) => {
+  const cumulativeChartData = Array.from({ length: projectionYears * 12 }, (_, i) => {
     const month = i + 1;
     const yearIdx = Math.floor(i / 12);
-    const yearData = yearlyProjections[Math.min(yearIdx, 4)];
+    const yearData = yearlyProjections[Math.min(yearIdx, projectionYears - 1)];
     const monthlyTotal = yearData ? yearData.totalImpact / 12 : 0;
     const cumulativeTotal = monthlyTotal * month;
     const cumulativeCost = effectiveCost * (month / 12);
@@ -94,13 +98,13 @@ export function Tab3FiveYear() {
   const waterfall = [
     { name: "Current Annual\nRevenue", base: 0, value: baseAnnualRevenue, type: "base" },
     {
-      name: "ADR Uplift\n(Yr 5)",
+      name: `ADR Uplift\n(Yr ${projectionYears})`,
       base: baseAnnualRevenue,
       value: Math.round(year5Projection?.incrementalRevenue * 0.5 || 0),
       type: "positive",
     },
     {
-      name: "Occ. Uplift\n(Yr 5)",
+      name: `Occ. Uplift\n(Yr ${projectionYears})`,
       base: baseAnnualRevenue + Math.round((year5Projection?.incrementalRevenue || 0) * 0.5),
       value: Math.round((year5Projection?.incrementalRevenue || 0) * 0.35),
       type: "positive",
@@ -112,7 +116,7 @@ export function Tab3FiveYear() {
       type: "positive",
     },
     {
-      name: "Projected Yr 5\nTotal Revenue",
+      name: `Projected Yr ${projectionYears}\nTotal Revenue`,
       base: 0,
       value: baseAnnualRevenue + Math.round(year5Projection?.totalImpact || 0),
       type: "total",
@@ -176,7 +180,7 @@ export function Tab3FiveYear() {
         <p className="text-white/30 text-xs font-sans mb-5">
           {hasImplementationFee && `Year 1 Duetto investment includes one-time implementation fee (${formatCurrency(effectiveInputs.implementationFee || 0, currency)}). `}
           {hasEscalation
-            ? `Annual subscription escalates +5%/yr from Year ${contractYears + 1} (after initial ${contractYears}-year term).`
+            ? `Annual subscription escalates +${Math.round((effectiveInputs.subscriptionEscalationRate ?? 0.05) * 100)}%/yr from Year ${contractYears + 1} (after initial ${contractYears}-year term).`
             : `No price escalation within the ${projectionLabel} window (contract term covers full period).`}
         </p>
         <div className="grid grid-cols-2 gap-8">
@@ -372,11 +376,11 @@ export function Tab3FiveYear() {
 
           <div className="grid grid-cols-3 gap-6 mt-6">
             <div className="text-center p-4 rounded-xl bg-navy-800/60 border border-white/10">
-              <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-2">Year 5 Incremental NOI</p>
+              <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-2">Year {projectionYears} Incremental NOI</p>
               <p className="text-2xl font-serif font-bold text-emerald-brand">
                 {formatCurrency(incrementalNOI, currency, true)}
               </p>
-              <p className="text-white/30 text-xs font-sans mt-1">85% of Yr 5 impact → NOI</p>
+              <p className="text-white/30 text-xs font-sans mt-1">85% of Yr {projectionYears} impact → NOI</p>
             </div>
             <div className="text-center p-4 rounded-xl bg-navy-800/60 border border-white/10">
               <p className="text-white/40 text-xs font-sans uppercase tracking-wider mb-2">Cap Rate Applied</p>

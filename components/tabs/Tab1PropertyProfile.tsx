@@ -841,7 +841,7 @@ export function Tab1PropertyProfile() {
               {/* Projection years */}
               <InputField
                 label="Projection Period"
-                tooltip="Number of years to include in the 5-year projection. Choose 3, 5, or 10 years depending on your analysis needs."
+                tooltip="Number of years to include in the multi-year projection. Choose 3, 5, or 10 years depending on your analysis needs."
               >
                 <SelectInput
                   value={String(inputs.projectionYears || 5)}
@@ -850,6 +850,20 @@ export function Tab1PropertyProfile() {
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((y) => (
                     <option key={y} value={y}>{y} {y === 1 ? "year" : "years"}</option>
                   ))}
+                </SelectInput>
+              </InputField>
+
+              {/* Post-contract subscription escalation rate */}
+              <InputField
+                label="Post-Contract Price Escalation"
+                tooltip="Annual subscription price increase applied after the initial contract term ends."
+              >
+                <SelectInput
+                  value={String(inputs.subscriptionEscalationRate ?? 0.05)}
+                  onChange={(e) => update("subscriptionEscalationRate", parseFloat(e.target.value))}
+                >
+                  <option value="0.03">3% / year</option>
+                  <option value="0.05">5% / year</option>
                 </SelectInput>
               </InputField>
 
@@ -917,10 +931,10 @@ export function Tab1PropertyProfile() {
               <div className="p-4 rounded-xl bg-navy-800/60 border border-white/10 text-center">
                 <p className="text-white/40 text-[10px] font-sans uppercase tracking-wider mb-1.5">Post-Contract Rate</p>
                 <p className="text-xl font-serif font-bold text-gold-400">
-                  {formatCurrency(annualRecurring * 1.05, duettoCurrency)}<span className="text-sm text-gold-400/60">/yr</span>
+                  {formatCurrency(annualRecurring * (1 + (inputs.subscriptionEscalationRate ?? 0.05)), duettoCurrency)}<span className="text-sm text-gold-400/60">/yr</span>
                 </p>
                 <p className="text-white/25 text-[10px] font-sans mt-1">
-                  +5% p.a. from yr {contractYears + 1}
+                  +{Math.round((inputs.subscriptionEscalationRate ?? 0.05) * 100)}% p.a. from yr {contractYears + 1}
                 </p>
               </div>
             </div>

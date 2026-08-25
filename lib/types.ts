@@ -70,6 +70,7 @@ export interface PropertyInputs {
   ohipConnectivityFee: number;  // Annual OHIP fee (Opera Cloud only, recurring)
   initialContractYears: number; // Length of initial contract term (1-5)
   projectionYears: number; // Number of years to project (1-10, default 5)
+  subscriptionEscalationRate: number; // Post-contract annual price escalation (e.g. 0.03 or 0.05)
   /** Derived — computed from breakdown above before passing to calculations */
   duettoAnnualCost: number;
 }

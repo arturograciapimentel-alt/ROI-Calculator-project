@@ -40,6 +40,7 @@ export function Tab5Executive() {
   const [isExporting, setIsExporting] = useState(false);
   const [includeFiveYear, setIncludeFiveYear] = useState(true);
   const [includePayback, setIncludePayback] = useState(true);
+  const [includeTimeReclaimed, setIncludeTimeReclaimed] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   const currency = outputCurrency;
@@ -94,7 +95,7 @@ export function Tab5Executive() {
   const totalFiveYearImpact = yearlyProjections.reduce((s, y) => s + y.totalImpact, 0);
   const totalFiveYearInvestment = yearlyProjections.reduce((s, y) => s + y.duettoInvestment, 0);
   const fiveYearROIMultiple = totalFiveYearInvestment > 0 ? totalFiveYearImpact / totalFiveYearInvestment : 0;
-  const incrementalNOI = (yearlyProjections[4]?.totalImpact || 0) * 0.85;
+  const incrementalNOI = (yearlyProjections[yearlyProjections.length - 1]?.totalImpact || 0) * 0.85;
   const valuationImpact = incrementalNOI / capRate;
 
   const adrContrib = proj.incrementalADRRevenue;
@@ -207,6 +208,21 @@ export function Tab5Executive() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={includePayback ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
             </svg>
             Payback Period
+          </button>
+          <button
+            onClick={() => setIncludeTimeReclaimed((v) => !v)}
+            className={clsx(
+              "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-sans transition-all",
+              includeTimeReclaimed
+                ? "bg-emerald-brand/15 border-emerald-brand/40 text-emerald-brand"
+                : "bg-white/5 border-white/15 text-white/40"
+            )}
+            title="Toggle Strategic Time Reclaimed metric — hide for properties switching from another RMS rather than manual work"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={includeTimeReclaimed ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+            </svg>
+            Time Reclaimed
           </button>
           <div className="flex items-center gap-2">
             <span className="text-white/30 text-xs font-sans whitespace-nowrap">Display in</span>
@@ -586,7 +602,7 @@ export function Tab5Executive() {
                     <span className="text-white/50 text-sm font-sans">Annual Financial Impact ({SCENARIO_LABELS[scenario]})</span>
                     <span className="text-gold-400 font-semibold font-sans">{formatCurrency(proj.totalAnnualImpact, currency, true)}</span>
                   </div>
-                  {proj.hoursSavedPerWeek > 0 && (
+                  {includeTimeReclaimed && proj.hoursSavedPerWeek > 0 && (
                     <div className="flex items-center justify-between py-2">
                       <span className="text-white/50 text-sm font-sans">Strategic Time Reclaimed</span>
                       <span className="text-gold-400 font-semibold font-sans">~{proj.hoursSavedPerWeek.toFixed(0)} hrs/week</span>
