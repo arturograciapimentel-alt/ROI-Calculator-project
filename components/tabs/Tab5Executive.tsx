@@ -30,6 +30,35 @@ const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
 
 const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
+function generateNextSteps(params: {
+  propertyLabel: string;
+  scenarioLabel: string;
+  paybackMonths: number;
+  totalAnnualImpact: number;
+  effectiveCost: number;
+  effectiveImplFee: number;
+  currency: Currency;
+  includePayback: boolean;
+}): string {
+  const { propertyLabel, scenarioLabel, paybackMonths, totalAnnualImpact, effectiveCost, effectiveImplFee, currency, includePayback } = params;
+  const lines: string[] = [];
+
+  lines.push(
+    includePayback
+      ? `• Approve the ${paybackMonths.toFixed(1)}-month payback and ${formatCurrency(totalAnnualImpact, currency, true)} projected annual impact (${scenarioLabel} scenario) for ${propertyLabel}`
+      : `• Approve the ${formatCurrency(totalAnnualImpact, currency, true)} projected annual impact (${scenarioLabel} scenario) for ${propertyLabel}`
+  );
+  lines.push(`• Confirm a go-live target date — implementation takes 6–8 weeks before RevPAR impact begins`);
+  lines.push(
+    effectiveImplFee > 0
+      ? `• Align GM, CFO, and revenue leadership on the ${formatCurrency(effectiveImplFee, currency)} implementation investment and ${formatCurrency(effectiveCost, currency)}/yr subscription`
+      : `• Align GM, CFO, and revenue leadership on the ${formatCurrency(effectiveCost, currency)}/yr subscription investment`
+  );
+  lines.push(`• Set Year 1 success checkpoints against the effectiveness ramp (Month 3, 6, 12)`);
+
+  return lines.join("\n");
+}
+
 export function Tab5Executive() {
   const {
     inputs, projections, scenario, yearlyProjections, assumptions,
@@ -67,6 +96,17 @@ export function Tab5Executive() {
 
   const SCENARIO_LABELS: Record<string, string> = { conservative: "Conservative", moderate: "Moderate", aggressive: "Aggressive" };
   const proj = projections[scenario];
+
+  const generatedNextSteps = generateNextSteps({
+    propertyLabel: inputs.propertyName || (isPortfolioMode ? "the portfolio" : "the property"),
+    scenarioLabel: SCENARIO_LABELS[scenario],
+    paybackMonths: proj.paybackMonths,
+    totalAnnualImpact: proj.totalAnnualImpact,
+    effectiveCost,
+    effectiveImplFee,
+    currency,
+    includePayback,
+  });
 
   // Market segment benchmark context
   const primaryBenchmark = costarBenchmarks[0] ?? null;
@@ -734,16 +774,27 @@ export function Tab5Executive() {
 
             {/* Next Steps */}
             <div>
-              <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold mb-3">Recommended Next Steps</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-gold-500 text-xs font-sans uppercase tracking-[0.15em] font-semibold">Recommended Next Steps</p>
+                {!isExporting && nextSteps && (
+                  <button
+                    onClick={() => setNextSteps("")}
+                    className="text-[10px] font-sans text-white/30 hover:text-white/60 transition-colors"
+                    title="Reset to auto-generated next steps based on this property's current numbers"
+                  >
+                    Regenerate from current numbers
+                  </button>
+                )}
+              </div>
               <div className="rounded-xl border border-white/10 bg-navy-800/40 p-4 min-h-[80px]">
                 {isExporting ? (
                   /* Static div for html2canvas — textarea doesn't render reliably */
                   <p className="text-white/70 text-sm font-sans leading-relaxed whitespace-pre-wrap">
-                    {nextSteps || "Enter personalized next steps for this prospect..."}
+                    {nextSteps || generatedNextSteps}
                   </p>
                 ) : (
                   <textarea
-                    value={nextSteps}
+                    value={nextSteps || generatedNextSteps}
                     onChange={(e) => setNextSteps(e.target.value)}
                     rows={4}
                     className="w-full bg-transparent text-white/70 text-sm font-sans outline-none resize-none leading-relaxed placeholder-white/20"

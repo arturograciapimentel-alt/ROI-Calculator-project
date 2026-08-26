@@ -175,8 +175,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
       preparedBy: "",
       costarBenchmarks: [],
       duettoMarketData: [],
-      nextSteps:
-        "• Schedule internal approval meeting with GM, CFO, and revenue leadership\n• Define Year 1 KPIs and success metrics for the implementation\n• Confirm implementation timeline and required IT/PMS integration resources\n• Begin contract negotiation and commercial term discussions",
+      // Left blank so the Executive Summary can generate next steps from the
+      // property's actual figures; user edits are persisted here once made.
+      nextSteps: "",
 
       setActiveTab: (tab) => set({ activeTab: tab }),
 
