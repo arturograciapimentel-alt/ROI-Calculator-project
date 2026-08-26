@@ -139,18 +139,21 @@ function extractClassHistorical(
 }
 
 function extractForecastRevPARGrowth(text: string): number | null {
-  // "Average Trend" table, overall market: rows are Occupancy/Occupancy Change/
-  // ADR/ADR Change/RevPAR/RevPAR Change, each with 5 columns (Current, 3 Mo,
-  // YTD, 12 Mo Historical Average, Forecast Average). We want the 5th value
-  // on the "RevPAR Change" row.
-  const startIdx = text.indexOf("Average Trend");
-  if (startIdx < 0) return null;
-  const slice = text.slice(startIdx, startIdx + 2000);
-  const m = slice.match(
-    /RevPAR\s+Change\s+([-\d.]+)%\s+([-\d.]+)%\s+([-\d.]+)%\s+([-\d.]+)%\s+([-\d.]+)%/
-  );
-  if (!m) return null;
-  return parseNum(m[5]) / 100;
+  // Narrative sentence in the Overview, e.g. "The 12-month RevPAR is
+  // projected to grow by 2.5% by year-end". This is a single-year forward
+  // estimate, unlike the "Average Trend" table's "Forecast Average" column
+  // (which uses a different, unconfirmed basis and produced numbers wildly
+  // inconsistent with this narrative figure in testing — do not use it for
+  // an annual growth-rate assumption).
+  const growRe = /RevPAR\s+is\s+(?:projected|expected|forecast)\s+to\s+grow\s+by\s+([\d.]+)%\s+by\s+year-end/i;
+  let m = text.match(growRe);
+  if (m) return parseNum(m[1]) / 100;
+
+  const declineRe = /RevPAR\s+is\s+(?:projected|expected|forecast)\s+to\s+(?:decline|contract|decrease|fall)\s+by\s+([\d.]+)%\s+by\s+year-end/i;
+  m = text.match(declineRe);
+  if (m) return -parseNum(m[1]) / 100;
+
+  return null;
 }
 
 function extractSegmentRevPARGrowth(text: string, segment: "transient" | "group"): number | null {

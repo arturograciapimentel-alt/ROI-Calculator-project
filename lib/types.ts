@@ -164,8 +164,9 @@ export interface CoStarBenchmark {
     "midscale-economy"?: CoStarHistoricalRow[];
   };
   /** CoStar's own forward-looking RevPAR growth estimate for the overall market
-   *  (fraction, e.g. 0.169 = 16.9%), parsed from the report's "Average Trend"
-   *  table's Forecast Average column. Overall market only, not per-segment. */
+   *  (fraction, e.g. 0.025 = 2.5%), parsed from the "projected to grow by X%
+   *  by year-end" sentence in the report's Overview narrative — a single-year
+   *  forward estimate. Overall market only, not per-segment. */
   forecastRevPARGrowthPct?: number | null;
   /** Market-wide transient RevPAR YoY growth (fraction). Best-effort parse from
    *  report narrative text; user-editable since phrasing varies by report. */

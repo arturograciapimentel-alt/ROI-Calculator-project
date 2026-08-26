@@ -402,13 +402,16 @@ function signalToScenarios(yoyPct: number) {
 }
 
 // Spread CoStar's single forecast RevPAR growth % across the three scenarios.
-// Input/output are fractions (e.g. 0.169), clamped to the sliders' 0-8% range.
+// Input/output are fractions (e.g. 0.025). Spread is additive (+/- percentage
+// points), not multiplicative, so scenarios stay differentiated even when
+// clamped at the high end — a multiplicative spread collapses all three to
+// the same ceiling once the base forecast exceeds it.
 function forecastToGrowthScenarios(forecastFraction: number) {
   const pct = forecastFraction * 100;
   return {
-    conservative: Math.max(0, Math.min(8, pct * 0.5)) / 100,
-    moderate:     Math.max(0, Math.min(8, pct))        / 100,
-    aggressive:   Math.max(0, Math.min(8, pct * 1.25)) / 100,
+    conservative: Math.max(0, Math.min(15, pct - 1.5)) / 100,
+    moderate:     Math.max(0, Math.min(15, pct))        / 100,
+    aggressive:   Math.max(0, Math.min(15, pct + 1.5)) / 100,
   };
 }
 
@@ -1328,7 +1331,7 @@ export function Tab4Market() {
                       CoStar Forecast Average RevPAR Growth
                     </p>
                     <p className="text-white/30 text-[10px] font-sans">
-                      Overall market, from the report's Average Trend forecast column — {primaryBenchmark.marketName}
+                      Overall market, from the report's year-end RevPAR growth forecast — {primaryBenchmark.marketName}
                     </p>
                   </div>
                   {primaryBenchmark.forecastRevPARGrowthPct != null && (

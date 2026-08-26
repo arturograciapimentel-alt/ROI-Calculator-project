@@ -314,10 +314,10 @@ export function Tab2ROIProjection() {
             <SliderInput
               value={Math.round((asmp.marketGrowthRate || 0) * 100)}
               min={0}
-              max={10}
+              max={15}
               step={0.5}
               onChange={(v) => updateAssumption(scenario, "marketGrowthRate", v / 100)}
-              formatValue={(v) => `+${(v * 0.01).toFixed(2)}%`}
+              formatValue={(v) => `+${v}%`}
             />
           </InputField>
         </div>
@@ -335,7 +335,7 @@ export function Tab2ROIProjection() {
               max={10}
               step={0.5}
               onChange={(v) => updateAssumption(scenario, "revparUpliftDegradationRate", v / 100)}
-              formatValue={(v) => `${(v * 0.01).toFixed(2)}% decay/yr`}
+              formatValue={(v) => `${v}% decay/yr`}
             />
           </InputField>
         </div>

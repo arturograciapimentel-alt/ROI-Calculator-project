@@ -201,7 +201,7 @@ export function Tab3FiveYear() {
             <SliderInput
               value={Math.round(asmp.marketGrowthRate * 100)}
               min={0}
-              max={8}
+              max={15}
               step={0.5}
               onChange={(v) => updateAssumption(scenario, "marketGrowthRate", v / 100)}
               formatValue={(v) => `${v}%/year`}
