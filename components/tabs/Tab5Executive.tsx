@@ -31,30 +31,19 @@ const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
 const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
 function generateNextSteps(params: {
-  propertyLabel: string;
-  scenarioLabel: string;
-  paybackMonths: number;
-  totalAnnualImpact: number;
-  effectiveCost: number;
-  effectiveImplFee: number;
-  currency: Currency;
-  includePayback: boolean;
+  segmentLabel: string;
+  projectedRevPARPct: number;
+  contractYears: number;
+  escalationRatePct: number;
 }): string {
-  const { propertyLabel, scenarioLabel, paybackMonths, totalAnnualImpact, effectiveCost, effectiveImplFee, currency, includePayback } = params;
+  const { segmentLabel, projectedRevPARPct, contractYears, escalationRatePct } = params;
   const lines: string[] = [];
 
-  lines.push(
-    includePayback
-      ? `• Review and internally approve this analysis — ${scenarioLabel.toLowerCase()} scenario projects a ${paybackMonths.toFixed(1)}-month payback and ${formatCurrency(totalAnnualImpact, currency, true)} in annual impact for ${propertyLabel}`
-      : `• Review and internally approve this analysis — ${scenarioLabel.toLowerCase()} scenario projects ${formatCurrency(totalAnnualImpact, currency, true)} in annual impact for ${propertyLabel}`
-  );
-  lines.push(
-    effectiveImplFee > 0
-      ? `• Confirm the ${formatCurrency(effectiveImplFee, currency)} implementation investment and ${formatCurrency(effectiveCost, currency)}/yr subscription fit your budget and fiscal year plan`
-      : `• Confirm the ${formatCurrency(effectiveCost, currency)}/yr subscription fits your budget and fiscal year plan`
-  );
-  lines.push(`• Select a go-live target date with your team — implementation takes 6–8 weeks before RevPAR impact begins`);
-  lines.push(`• Assign an internal project lead to coordinate PMS/IT integration and own the Year 1 effectiveness ramp (checkpoints at Month 3, 6, 12)`);
+  lines.push(`• Validate the projected ${projectedRevPARPct.toFixed(1)}% RevPAR improvement against your own PMS/STR data`);
+  lines.push(`• Request references from comparable ${segmentLabel} properties using Duetto`);
+  lines.push(`• Confirm contract terms — ${contractYears}-year initial term, +${escalationRatePct}% escalation thereafter, cancellation and SLA provisions — before signing`);
+  lines.push(`• Discuss a phased rollout or pilot period with the Duetto team, if available`);
+  lines.push(`• Define Month 3/6/12 success checkpoints against the RMS effectiveness ramp`);
 
   return lines.join("\n");
 }
@@ -97,17 +86,6 @@ export function Tab5Executive() {
   const SCENARIO_LABELS: Record<string, string> = { conservative: "Conservative", moderate: "Moderate", aggressive: "Aggressive" };
   const proj = projections[scenario];
 
-  const generatedNextSteps = generateNextSteps({
-    propertyLabel: inputs.propertyName || (isPortfolioMode ? "the portfolio" : "the property"),
-    scenarioLabel: SCENARIO_LABELS[scenario],
-    paybackMonths: proj.paybackMonths,
-    totalAnnualImpact: proj.totalAnnualImpact,
-    effectiveCost,
-    effectiveImplFee,
-    currency,
-    includePayback,
-  });
-
   // Market segment benchmark context
   const primaryBenchmark = costarBenchmarks[0] ?? null;
   const segmentKey = inputs.propertyType as keyof NonNullable<typeof primaryBenchmark>["byClass"];
@@ -120,6 +98,13 @@ export function Tab5Executive() {
     : 0;
   // How many percentage points above the market segment trend
   const outperformancePP = segmentYoY !== null ? projectedRevPARPct - segmentYoY.revparPct : null;
+
+  const generatedNextSteps = generateNextSteps({
+    segmentLabel: PROPERTY_TYPE_LABELS[inputs.propertyType],
+    projectedRevPARPct,
+    contractYears: effectiveInputs.initialContractYears || 1,
+    escalationRatePct: Math.round((effectiveInputs.subscriptionEscalationRate ?? 0.05) * 100),
+  });
 
   // Performance indices vs. the CoStar segment average (RGI/ARI/MPI) — industry-standard
   // benchmarking terms. NOTE: this compares against the segment/class average from the
