@@ -42,7 +42,6 @@ function generateNextSteps(params: {
   lines.push(`• Validate the projected ${projectedRevPARPct.toFixed(1)}% RevPAR improvement against your own PMS/STR data`);
   lines.push(`• Request references from comparable ${segmentLabel} properties using Duetto`);
   lines.push(`• Confirm contract terms — ${contractYears}-year initial term, +${escalationRatePct}% escalation thereafter, cancellation and SLA provisions — before signing`);
-  lines.push(`• Discuss a phased rollout or pilot period with the Duetto team, if available`);
   lines.push(`• Define Month 3, 6, and 12 checkpoints to track your own RevPAR and occupancy performance internally`);
 
   return lines.join("\n");
