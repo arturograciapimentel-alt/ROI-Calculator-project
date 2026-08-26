@@ -30,6 +30,19 @@ const CURRENCY_OPTIONS: { value: Currency; label: string }[] = [
 
 const PIE_COLORS = ["#C4FF45", "#68FFF2", "#7459EE", "#FFD9A0"];
 
+// Internal switch-performance stats by competitor RMS. Matched against the
+// user-entered competitorRMSName by case-insensitive substring. Add more
+// entries here as additional internal benchmarks become available.
+const COMPETITOR_SWITCH_BENCHMARKS: { match: string; label: string; revparUpliftPct: number; months: number }[] = [
+  { match: "ideas", label: "IDeaS", revparUpliftPct: 4.8, months: 6 },
+];
+
+function matchCompetitorBenchmark(competitorRMSName: string) {
+  const name = competitorRMSName.trim().toLowerCase();
+  if (!name) return null;
+  return COMPETITOR_SWITCH_BENCHMARKS.find((b) => name.includes(b.match)) ?? null;
+}
+
 function generateNextSteps(params: {
   segmentLabel: string;
   projectedRevPARPct: number;
@@ -97,6 +110,12 @@ export function Tab5Executive() {
     : 0;
   // How many percentage points above the market segment trend
   const outperformancePP = segmentYoY !== null ? projectedRevPARPct - segmentYoY.revparPct : null;
+
+  // Internal switch-performance stat, shown only when the property is
+  // currently on a competitor RMS we have a benchmark for.
+  const competitorSwitchBenchmark = effectiveInputs.rmApproach === "competitor-rms"
+    ? matchCompetitorBenchmark(effectiveInputs.competitorRMSName || "")
+    : null;
 
   const generatedNextSteps = generateNextSteps({
     segmentLabel: PROPERTY_TYPE_LABELS[inputs.propertyType],
@@ -523,6 +542,11 @@ export function Tab5Executive() {
                     {outperformancePP >= 0
                       ? `Duetto positions this property to grow RevPAR ${outperformancePP.toFixed(1)}pp above the ${PROPERTY_TYPE_LABELS[inputs.propertyType]} segment average.`
                       : `Market segment is growing faster than current projection; consider a more aggressive scenario.`}
+                  </p>
+                )}
+                {competitorSwitchBenchmark && (
+                  <p className="text-white/30 text-[10px] font-sans mt-1 text-center">
+                    Hotel companies that switch from {competitorSwitchBenchmark.label} to Duetto see an average {competitorSwitchBenchmark.revparUpliftPct}% RevPAR increase in the first {competitorSwitchBenchmark.months} months.
                   </p>
                 )}
 
