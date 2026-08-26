@@ -45,16 +45,16 @@ function generateNextSteps(params: {
 
   lines.push(
     includePayback
-      ? `• Approve the ${paybackMonths.toFixed(1)}-month payback and ${formatCurrency(totalAnnualImpact, currency, true)} projected annual impact (${scenarioLabel} scenario) for ${propertyLabel}`
-      : `• Approve the ${formatCurrency(totalAnnualImpact, currency, true)} projected annual impact (${scenarioLabel} scenario) for ${propertyLabel}`
+      ? `• Review and internally approve this analysis — ${scenarioLabel.toLowerCase()} scenario projects a ${paybackMonths.toFixed(1)}-month payback and ${formatCurrency(totalAnnualImpact, currency, true)} in annual impact for ${propertyLabel}`
+      : `• Review and internally approve this analysis — ${scenarioLabel.toLowerCase()} scenario projects ${formatCurrency(totalAnnualImpact, currency, true)} in annual impact for ${propertyLabel}`
   );
-  lines.push(`• Confirm a go-live target date — implementation takes 6–8 weeks before RevPAR impact begins`);
   lines.push(
     effectiveImplFee > 0
-      ? `• Align GM, CFO, and revenue leadership on the ${formatCurrency(effectiveImplFee, currency)} implementation investment and ${formatCurrency(effectiveCost, currency)}/yr subscription`
-      : `• Align GM, CFO, and revenue leadership on the ${formatCurrency(effectiveCost, currency)}/yr subscription investment`
+      ? `• Confirm the ${formatCurrency(effectiveImplFee, currency)} implementation investment and ${formatCurrency(effectiveCost, currency)}/yr subscription fit your budget and fiscal year plan`
+      : `• Confirm the ${formatCurrency(effectiveCost, currency)}/yr subscription fits your budget and fiscal year plan`
   );
-  lines.push(`• Set Year 1 success checkpoints against the effectiveness ramp (Month 3, 6, 12)`);
+  lines.push(`• Select a go-live target date with your team — implementation takes 6–8 weeks before RevPAR impact begins`);
+  lines.push(`• Assign an internal project lead to coordinate PMS/IT integration and own the Year 1 effectiveness ramp (checkpoints at Month 3, 6, 12)`);
 
   return lines.join("\n");
 }
